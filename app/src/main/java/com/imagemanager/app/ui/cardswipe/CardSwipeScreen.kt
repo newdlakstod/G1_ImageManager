@@ -6,10 +6,11 @@ import android.os.Vibrator
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -17,17 +18,22 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,16 +42,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -53,11 +63,14 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.imagemanager.app.ui.piles.PilePickerSheet
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private const val UNDO_WINDOW_MS = 4000L
-private const val PINCH_TO_GRID_ZOOM_THRESHOLD = 0.6f
+private const val PINCH_TO_GRID_SCALE_THRESHOLD = 0.6f
+private const val MIN_PHOTO_SCALE = 0.3f
+private const val MAX_PHOTO_SCALE = 4f
 
 private val SWIPE_THRESHOLD_DP = 96.dp
 
@@ -83,7 +96,13 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (showGrid) {
-            LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.fillMaxSize()) {
+            val gridState = rememberLazyGridState()
+            val coroutineScope = rememberCoroutineScope()
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Fixed(3),
+                modifier = Modifier.fillMaxSize(),
+            ) {
                 items(state.photos, key = { it.mediaId }) { gridPhoto ->
                     AsyncImage(
                         model = gridPhoto.uri,
@@ -99,6 +118,11 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                     )
                 }
             }
+            VerticalFastScrollBar(
+                itemCount = state.photos.size,
+                onJumpTo = { index -> coroutineScope.launch { gridState.scrollToItem(index) } },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
         } else {
             val selectedPile = piles.find { it.pileId == state.currentPileId }
             AssistChip(
@@ -123,12 +147,20 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                 }
             } else {
                 var dragOffset by remember(photo.mediaId) { mutableStateOf(Offset.Zero) }
+                var panOffset by remember(photo.mediaId) { mutableStateOf(Offset.Zero) }
+                var scale by remember(photo.mediaId) { mutableFloatStateOf(1f) }
                 AsyncImage(
                     model = photo.uri,
                     contentDescription = photo.displayName,
                     modifier = Modifier
                         .fillMaxSize()
-                        .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
+                        .offset {
+                            IntOffset(
+                                (dragOffset.x + panOffset.x).roundToInt(),
+                                (dragOffset.y + panOffset.y).roundToInt(),
+                            )
+                        }
+                        .scale(scale)
                         .pointerInput(photo.mediaId) {
                             detectDragGestures(
                                 onDragEnd = {
@@ -166,16 +198,21 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                         .pointerInput(photo.mediaId) {
                             // Only reacts once a second finger is down, so single-finger
                             // swipes above are never consumed/interfered with by this block.
+                            // Pinching past the base scale (< threshold) opens the grid,
+                            // same as Google Photos' pinch-out-to-grid gesture.
                             awaitEachGesture {
                                 awaitFirstDown(requireUnconsumed = false)
-                                var zoom = 1f
                                 while (true) {
                                     val event = awaitPointerEvent()
                                     if (event.changes.size >= 2) {
-                                        zoom *= event.calculateZoom()
-                                        if (zoom < PINCH_TO_GRID_ZOOM_THRESHOLD) {
+                                        scale = (scale * event.calculateZoom())
+                                            .coerceIn(MIN_PHOTO_SCALE, MAX_PHOTO_SCALE)
+                                        if (scale <= PINCH_TO_GRID_SCALE_THRESHOLD) {
                                             showGrid = true
-                                            zoom = 1f
+                                            scale = 1f
+                                            panOffset = Offset.Zero
+                                        } else if (scale > 1f) {
+                                            panOffset += event.calculatePan()
                                         }
                                         event.changes.forEach { change ->
                                             if (change.positionChanged()) change.consume()
@@ -189,15 +226,21 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
             }
 
             if (state.photos.size > 1) {
-                Slider(
-                    value = state.currentIndex.toFloat(),
-                    onValueChange = { viewModel.jumpToIndex(it.roundToInt()) },
-                    valueRange = 0f..(state.photos.size - 1).toFloat(),
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                )
+                        .padding(horizontal = 24.dp),
+                ) {
+                    Text("${state.currentIndex + 1} / ${state.photos.size}")
+                    Slider(
+                        value = state.currentIndex.toFloat(),
+                        onValueChange = { viewModel.jumpToIndex(it.roundToInt()) },
+                        valueRange = 0f..(state.photos.size - 1).toFloat(),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    )
+                }
             }
 
             if (showPilePicker) {
@@ -237,5 +280,45 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun VerticalFastScrollBar(
+    itemCount: Int,
+    onJumpTo: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (itemCount <= 1) return
+    val density = LocalDensity.current
+    val thumbHeight = 40.dp
+    var trackHeightPx by remember { mutableFloatStateOf(0f) }
+    var thumbOffsetPx by remember { mutableFloatStateOf(0f) }
+
+    Box(
+        modifier = modifier
+            .width(28.dp)
+            .fillMaxHeight()
+            .onSizeChanged { trackHeightPx = it.height.toFloat() }
+            .pointerInput(itemCount) {
+                detectDragGestures { change, _ ->
+                    change.consume()
+                    val thumbHeightPx = with(density) { thumbHeight.toPx() }
+                    val maxOffset = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
+                    val rawOffset = change.position.y - thumbHeightPx / 2
+                    thumbOffsetPx = rawOffset.coerceIn(0f, maxOffset)
+                    val progress = if (maxOffset > 0f) thumbOffsetPx / maxOffset else 0f
+                    onJumpTo((progress * (itemCount - 1)).roundToInt())
+                }
+            },
+    ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset { IntOffset(0, thumbOffsetPx.roundToInt()) }
+                .width(6.dp)
+                .height(thumbHeight)
+                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(3.dp)),
+        )
     }
 }
