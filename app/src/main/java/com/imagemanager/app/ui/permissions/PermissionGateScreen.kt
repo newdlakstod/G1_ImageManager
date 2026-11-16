@@ -32,22 +32,25 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
+private val MEDIA_PERMISSIONS = arrayOf(
+    Manifest.permission.READ_MEDIA_IMAGES,
+    Manifest.permission.READ_MEDIA_VIDEO,
+)
+
 @Composable
 fun PermissionGateScreen(onGranted: () -> Unit) {
     val context = LocalContext.current
-    var mediaGranted by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_MEDIA_IMAGES,
-            ) == PackageManager.PERMISSION_GRANTED,
-        )
+
+    fun mediaPermissionsGranted(): Boolean = MEDIA_PERMISSIONS.all {
+        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
     }
+
+    var mediaGranted by remember { mutableStateOf(mediaPermissionsGranted()) }
     var allFilesGranted by remember { mutableStateOf(Environment.isExternalStorageManager()) }
 
     val mediaPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> mediaGranted = granted }
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { mediaGranted = mediaPermissionsGranted() }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -69,12 +72,12 @@ fun PermissionGateScreen(onGranted: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("사진에 접근하려면 권한이 필요합니다")
+        Text("사진과 동영상에 접근하려면 권한이 필요합니다")
         Spacer(Modifier.height(16.dp))
         when {
             !mediaGranted -> Button(onClick = {
-                mediaPermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
-            }) { Text("사진 접근 허용") }
+                mediaPermissionLauncher.launch(MEDIA_PERMISSIONS)
+            }) { Text("사진/동영상 접근 허용") }
 
             !allFilesGranted -> Button(onClick = {
                 val intent = Intent(

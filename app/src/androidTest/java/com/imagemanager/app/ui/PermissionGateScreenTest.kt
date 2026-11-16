@@ -16,6 +16,6 @@ class PermissionGateScreenTest {
             PermissionGateScreen(onGranted = {})
         }
 
-        composeRule.onNodeWithText("사진 접근 허용").assertExists()
+        composeRule.onNodeWithText("사진/동영상 접근 허용").assertExists()
     }
 }

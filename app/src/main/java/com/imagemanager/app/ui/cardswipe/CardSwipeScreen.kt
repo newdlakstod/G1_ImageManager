@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.imagemanager.app.ui.common.FavoriteBadge
 import com.imagemanager.app.ui.common.VideoBadge
+import com.imagemanager.app.ui.common.VideoPlayOverlay
 import com.imagemanager.app.ui.piles.PilePickerSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -295,7 +296,7 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                     FavoriteBadge(modifier = Modifier.align(Alignment.TopStart))
                 }
                 if (photo.isVideo) {
-                    VideoBadge(modifier = Modifier.align(Alignment.BottomEnd))
+                    VideoPlayOverlay(videoUri = photo.uri, modifier = Modifier.align(Alignment.Center))
                 }
             }
 
