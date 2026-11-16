@@ -8,4 +8,5 @@ data class Photo(
     val displayName: String,
     val dateModified: Long,
     val isFavorite: Boolean,
+    val isVideo: Boolean = false,
 )

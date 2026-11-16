@@ -5,6 +5,7 @@ import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.IntentSender
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -14,13 +15,17 @@ import com.imagemanager.app.data.db.PileEntity
 @RequiresApi(Build.VERSION_CODES.R)
 class MediaStoreRepository(private val context: Context) : PhotoActions {
 
-    private val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+    private val collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
+
+    private val mediaTypeFilter = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN " +
+        "(${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}, ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO})"
 
     private val projection = arrayOf(
-        MediaStore.Images.Media._ID,
-        MediaStore.Images.Media.DISPLAY_NAME,
-        MediaStore.Images.Media.DATE_MODIFIED,
-        MediaStore.Images.Media.IS_FAVORITE,
+        MediaStore.Files.FileColumns._ID,
+        MediaStore.Files.FileColumns.DISPLAY_NAME,
+        MediaStore.Files.FileColumns.DATE_MODIFIED,
+        MediaStore.Files.FileColumns.IS_FAVORITE,
+        MediaStore.Files.FileColumns.MEDIA_TYPE,
     )
 
     fun listPhotos(offset: Int, limit: Int): List<Photo> =
@@ -28,7 +33,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
 
     fun listFavorites(offset: Int, limit: Int): List<Photo> =
         query(
-            selection = "${MediaStore.Images.Media.IS_FAVORITE} = 1",
+            selection = "${MediaStore.Files.FileColumns.IS_FAVORITE} = 1",
             selectionArgs = null,
             offset = offset,
             limit = limit,
@@ -41,13 +46,13 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         limit = Int.MAX_VALUE,
     )
 
-    fun uriFor(mediaId: Long): android.net.Uri = ContentUris.withAppendedId(collection, mediaId)
+    fun uriFor(mediaId: Long): Uri = ContentUris.withAppendedId(collection, mediaId)
 
     fun listByIds(mediaIds: List<Long>): List<Photo> {
         if (mediaIds.isEmpty()) return emptyList()
         val placeholders = mediaIds.joinToString(",") { "?" }
         return query(
-            selection = "${MediaStore.Images.Media._ID} IN ($placeholders)",
+            selection = "${MediaStore.Files.FileColumns._ID} IN ($placeholders)",
             selectionArgs = mediaIds.map { it.toString() }.toTypedArray(),
             offset = 0,
             limit = mediaIds.size,
@@ -55,7 +60,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
     }
 
     fun listByRelativePath(relativePath: String): List<Photo> = query(
-        selection = "${MediaStore.Images.Media.RELATIVE_PATH} = ?",
+        selection = "${MediaStore.Files.FileColumns.RELATIVE_PATH} = ?",
         selectionArgs = arrayOf(relativePath),
         offset = 0,
         limit = Int.MAX_VALUE,
@@ -67,9 +72,10 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         offset: Int,
         limit: Int,
     ): List<Photo> {
-        val sortOrder = "${MediaStore.Images.Media.DATE_MODIFIED} DESC"
+        val combinedSelection = if (selection != null) "($mediaTypeFilter) AND ($selection)" else mediaTypeFilter
+        val sortOrder = "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
         val queryArgs = Bundle().apply {
-            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, combinedSelection)
             putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
             putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, sortOrder)
             putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
@@ -77,10 +83,11 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         }
         val photos = mutableListOf<Photo>()
         context.contentResolver.query(collection, projection, queryArgs, null)?.use { cursor ->
-            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-            val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
-            val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED)
-            val favCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.IS_FAVORITE)
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+            val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+            val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
+            val favCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.IS_FAVORITE)
+            val typeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
                 photos += Photo(
@@ -89,6 +96,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
                     displayName = cursor.getString(nameCol),
                     dateModified = cursor.getLong(dateCol),
                     isFavorite = cursor.getInt(favCol) != 0,
+                    isVideo = cursor.getInt(typeCol) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO,
                 )
             }
         }
@@ -98,7 +106,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
     override fun toggleFavorite(mediaId: Long, favorite: Boolean): IntentSender? {
         val uri = ContentUris.withAppendedId(collection, mediaId)
         val values = ContentValues().apply {
-            put(MediaStore.Images.Media.IS_FAVORITE, if (favorite) 1 else 0)
+            put(MediaStore.Files.FileColumns.IS_FAVORITE, if (favorite) 1 else 0)
         }
         return try {
             context.contentResolver.update(uri, values, null, null)
@@ -121,7 +129,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
     override fun movePhotoToPile(mediaId: Long, pile: PileEntity): IntentSender? {
         val uri = ContentUris.withAppendedId(collection, mediaId)
         val values = ContentValues().apply {
-            put(MediaStore.Images.Media.RELATIVE_PATH, pile.folderRelativePath)
+            put(MediaStore.Files.FileColumns.RELATIVE_PATH, pile.folderRelativePath)
         }
         return try {
             context.contentResolver.update(uri, values, null, null)
@@ -133,14 +141,17 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
 
     override fun listGalleryFolders(): List<GalleryFolder> {
         val folderProjection = arrayOf(
-            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
-            MediaStore.Images.Media.RELATIVE_PATH,
+            MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME,
+            MediaStore.Files.FileColumns.RELATIVE_PATH,
         )
+        val queryArgs = Bundle().apply {
+            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, mediaTypeFilter)
+        }
         val seenPaths = LinkedHashSet<String>()
         val folders = mutableListOf<GalleryFolder>()
-        context.contentResolver.query(collection, folderProjection, null, null, null)?.use { cursor ->
-            val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-            val pathCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.RELATIVE_PATH)
+        context.contentResolver.query(collection, folderProjection, queryArgs, null)?.use { cursor ->
+            val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
+            val pathCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.RELATIVE_PATH)
             while (cursor.moveToNext()) {
                 val path = cursor.getString(pathCol) ?: continue
                 if (seenPaths.add(path)) {

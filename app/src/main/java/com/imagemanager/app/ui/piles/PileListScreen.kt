@@ -1,6 +1,7 @@
 package com.imagemanager.app.ui.piles
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.imagemanager.app.data.db.PileEntity
@@ -29,11 +31,15 @@ fun PileListScreen(viewModel: PileViewModel, onPileClick: (PileEntity) -> Unit) 
     var newPileName by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Row {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             OutlinedTextField(
                 value = newPileName,
                 onValueChange = { newPileName = it },
                 label = { Text("새 폴더 이름") },
+                singleLine = true,
                 modifier = Modifier.weight(1f),
             )
             Button(onClick = {
@@ -46,7 +52,7 @@ fun PileListScreen(viewModel: PileViewModel, onPileClick: (PileEntity) -> Unit) 
             items(piles, key = { it.pile.pileId }) { pileWithCount ->
                 ListItem(
                     headlineContent = { Text(pileWithCount.pile.name) },
-                    trailingContent = { Text("${pileWithCount.photoCount}장") },
+                    trailingContent = { Text("(${pileWithCount.photoCount})") },
                     modifier = Modifier.clickable { onPileClick(pileWithCount.pile) },
                 )
             }

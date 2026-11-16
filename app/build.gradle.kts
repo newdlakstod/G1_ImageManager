@@ -53,6 +53,7 @@ dependencies {
     implementation("androidx.paging:paging-compose:3.3.0")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-video:2.6.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.13")

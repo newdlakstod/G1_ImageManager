@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.imagemanager.app.ui.common.FavoriteBadge
+import com.imagemanager.app.ui.common.VideoBadge
 import com.imagemanager.app.ui.piles.PilePickerSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -158,6 +159,9 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                         )
                         if (gridPhoto.isFavorite) {
                             FavoriteBadge(modifier = Modifier.align(Alignment.TopStart))
+                        }
+                        if (gridPhoto.isVideo) {
+                            VideoBadge(modifier = Modifier.align(Alignment.BottomEnd))
                         }
                     }
                 }
@@ -289,6 +293,9 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                 )
                 if (photo.isFavorite) {
                     FavoriteBadge(modifier = Modifier.align(Alignment.TopStart))
+                }
+                if (photo.isVideo) {
+                    VideoBadge(modifier = Modifier.align(Alignment.BottomEnd))
                 }
             }
 
