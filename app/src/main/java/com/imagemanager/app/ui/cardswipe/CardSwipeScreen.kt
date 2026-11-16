@@ -1,6 +1,8 @@
 package com.imagemanager.app.ui.cardswipe
 
 import android.app.Activity
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,23 +25,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.imagemanager.app.ui.piles.PilePickerSheet
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private const val SWIPE_THRESHOLD_PX = 300f
+private val SWIPE_THRESHOLD_DP = 96.dp
 
 @Composable
 fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
     val state by viewModel.state.collectAsState()
     val piles by viewModel.piles.collectAsState()
     var showPilePicker by remember { mutableStateOf(false) }
+    val swipeThresholdPx = with(LocalDensity.current) { SWIPE_THRESHOLD_DP.toPx() }
 
     val confirmationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result -> viewModel.onConfirmationResult(result.resultCode == Activity.RESULT_OK) }
+
+    val context = LocalContext.current
+    LaunchedEffect(viewModel) {
+        viewModel.trashConfirmedEvents.collect {
+            val vibrator = context.getSystemService(Vibrator::class.java)
+            vibrator?.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE))
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         val selectedPile = piles.find { it.pileId == state.currentPileId }
@@ -63,18 +78,19 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                         detectDragGestures(
                             onDragEnd = {
                                 val offset = dragOffset
+                                val isVerticalGesture = abs(offset.y) > abs(offset.x)
                                 when {
-                                    offset.y <= -SWIPE_THRESHOLD_PX -> viewModel.requestTrash {
+                                    isVerticalGesture && offset.y <= -swipeThresholdPx -> viewModel.requestTrash {
                                         confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
                                     }
-                                    offset.y >= SWIPE_THRESHOLD_PX -> viewModel.requestMoveToCurrentPile(
+                                    isVerticalGesture && offset.y >= swipeThresholdPx -> viewModel.requestMoveToCurrentPile(
                                         onNeedsConfirmation = {
                                             confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
                                         },
                                         onNoPileSelected = { showPilePicker = true },
                                     )
-                                    offset.x >= SWIPE_THRESHOLD_PX -> viewModel.movePrevious()
-                                    offset.x <= -SWIPE_THRESHOLD_PX -> viewModel.moveNext()
+                                    !isVerticalGesture && offset.x >= swipeThresholdPx -> viewModel.movePrevious()
+                                    !isVerticalGesture && offset.x <= -swipeThresholdPx -> viewModel.moveNext()
                                 }
                                 dragOffset = Offset.Zero
                             },

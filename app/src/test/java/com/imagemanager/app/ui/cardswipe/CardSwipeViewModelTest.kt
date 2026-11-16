@@ -79,6 +79,8 @@ class CardSwipeViewModelTest {
             moveCallCount++
             return moveSender
         }
+
+        override fun listGalleryFolders(): List<com.imagemanager.app.data.GalleryFolder> = emptyList()
     }
 
     @Test

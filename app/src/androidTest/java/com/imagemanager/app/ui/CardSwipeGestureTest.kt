@@ -26,6 +26,7 @@ class CardSwipeGestureTest {
         override fun requestTrash(mediaIds: List<Long>) =
             throw UnsupportedOperationException("not exercised by this test")
         override fun movePhotoToPile(mediaId: Long, pile: PileEntity) = null
+        override fun listGalleryFolders() = emptyList<com.imagemanager.app.data.GalleryFolder>()
     }
 
     @Test

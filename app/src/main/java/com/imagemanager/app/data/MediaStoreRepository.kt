@@ -118,4 +118,24 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
             MediaStore.createWriteRequest(context.contentResolver, listOf(uri)).intentSender
         }
     }
+
+    override fun listGalleryFolders(): List<GalleryFolder> {
+        val folderProjection = arrayOf(
+            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+            MediaStore.Images.Media.RELATIVE_PATH,
+        )
+        val seenPaths = LinkedHashSet<String>()
+        val folders = mutableListOf<GalleryFolder>()
+        context.contentResolver.query(collection, folderProjection, null, null, null)?.use { cursor ->
+            val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+            val pathCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.RELATIVE_PATH)
+            while (cursor.moveToNext()) {
+                val path = cursor.getString(pathCol) ?: continue
+                if (seenPaths.add(path)) {
+                    folders += GalleryFolder(name = cursor.getString(nameCol) ?: path, relativePath = path)
+                }
+            }
+        }
+        return folders.sortedBy { it.name }
+    }
 }

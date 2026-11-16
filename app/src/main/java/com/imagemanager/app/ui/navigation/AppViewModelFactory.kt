@@ -23,7 +23,7 @@ class AppViewModelFactory(
         FavoritesViewModel::class.java ->
             FavoritesViewModel(app.mediaStoreRepository) as T
         PileViewModel::class.java ->
-            PileViewModel(app.database.pileDao()) as T
+            PileViewModel(app.database.pileDao(), app.mediaStoreRepository) as T
         SimilarGroupsViewModel::class.java ->
             SimilarGroupsViewModel(app.duplicateScanner, app.database.duplicateGroupDao()) as T
         CardSwipeViewModel::class.java ->

@@ -8,7 +8,10 @@ import com.imagemanager.app.data.PhotoActions
 import com.imagemanager.app.data.db.PileDao
 import com.imagemanager.app.data.db.PileEntity
 import com.imagemanager.app.ui.piles.PilePaths
+import com.imagemanager.app.ui.piles.syncPilesWithGalleryFolders
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -35,7 +38,16 @@ class CardSwipeViewModel(
     val piles: StateFlow<List<PileEntity>> = pileDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _trashConfirmedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val trashConfirmedEvents: SharedFlow<Unit> = _trashConfirmedEvents
+
     private var pendingConfirmation: (() -> Unit)? = null
+
+    init {
+        viewModelScope.launch {
+            syncPilesWithGalleryFolders(pileDao, photoActions)
+        }
+    }
 
     fun moveNext() {
         if (_state.value.currentIndex < _state.value.photos.size) advance()
@@ -67,7 +79,10 @@ class CardSwipeViewModel(
     fun requestTrash(onNeedsConfirmation: (IntentSender) -> Unit) {
         val photo = _state.value.currentPhoto ?: return
         val sender = photoActions.requestTrash(listOf(photo.mediaId))
-        pendingConfirmation = { advance() }
+        pendingConfirmation = {
+            advance()
+            _trashConfirmedEvents.tryEmit(Unit)
+        }
         onNeedsConfirmation(sender)
     }
 
