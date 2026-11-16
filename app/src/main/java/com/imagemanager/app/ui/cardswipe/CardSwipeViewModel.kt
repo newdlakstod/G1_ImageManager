@@ -59,6 +59,11 @@ class CardSwipeViewModel(
         if (current.currentIndex > 0) _state.value = current.copy(currentIndex = current.currentIndex - 1)
     }
 
+    fun jumpTo(mediaId: Long) {
+        val index = _state.value.photos.indexOfFirst { it.mediaId == mediaId }
+        if (index >= 0) _state.value = _state.value.copy(currentIndex = index)
+    }
+
     fun selectPile(pileId: Long) {
         _state.value = _state.value.copy(currentPileId = pileId)
     }

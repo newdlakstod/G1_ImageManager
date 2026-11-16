@@ -91,6 +91,27 @@ class CardSwipeViewModelTest {
     }
 
     @Test
+    fun jumpTo_movesCurrentIndexToMatchingPhoto() {
+        val actions = FakePhotoActions()
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1), photo(2), photo(3)))
+
+        viewModel.jumpTo(3L)
+
+        assertEquals(2, viewModel.state.value.currentIndex)
+        assertEquals(3L, viewModel.state.value.currentPhoto?.mediaId)
+    }
+
+    @Test
+    fun jumpTo_withUnknownMediaId_doesNothing() {
+        val actions = FakePhotoActions()
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1), photo(2)))
+
+        viewModel.jumpTo(999L)
+
+        assertEquals(0, viewModel.state.value.currentIndex)
+    }
+
+    @Test
     fun moveNext_and_movePrevious_onlyChangeIndex_noRepositoryCalls() {
         val actions = FakePhotoActions()
         val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1), photo(2)))
