@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
@@ -187,7 +188,9 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                 }
                 Surface(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
-                    tonalElevation = 4.dp,
+                    shape = RoundedCornerShape(50),
+                    shadowElevation = 6.dp,
+                    tonalElevation = 3.dp,
                 ) {
                     TextButton(onClick = {
                         viewModel.undoLastTrash {
