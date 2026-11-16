@@ -1,5 +1,6 @@
 package com.imagemanager.app.ui.piles
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,9 +21,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.imagemanager.app.data.db.PileEntity
 
 @Composable
-fun PileListScreen(viewModel: PileViewModel) {
+fun PileListScreen(viewModel: PileViewModel, onPileClick: (PileEntity) -> Unit) {
     val piles by viewModel.piles.collectAsState()
     var newPileName by remember { mutableStateOf("") }
 
@@ -42,7 +44,10 @@ fun PileListScreen(viewModel: PileViewModel) {
         Spacer(Modifier.height(16.dp))
         LazyColumn {
             items(piles, key = { it.pileId }) { pile ->
-                ListItem(headlineContent = { Text(pile.name) })
+                ListItem(
+                    headlineContent = { Text(pile.name) },
+                    modifier = Modifier.clickable { onPileClick(pile) },
+                )
             }
         }
     }

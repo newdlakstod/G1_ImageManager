@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -208,11 +209,14 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                     contentColor = Color.White,
                     shadowElevation = 8.dp,
                 ) {
-                    TextButton(onClick = {
-                        viewModel.undoLastTrash {
-                            confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
-                        }
-                    }) {
+                    TextButton(
+                        onClick = {
+                            viewModel.undoLastTrash {
+                                confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
+                            }
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
+                    ) {
                         Text("실행 취소")
                     }
                 }

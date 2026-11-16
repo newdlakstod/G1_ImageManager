@@ -1,5 +1,6 @@
 package com.imagemanager.app.ui.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Compare
@@ -112,7 +113,12 @@ fun AppNavHost(app: ImageManagerApp) {
             }
             composable(Tab.Piles.route) {
                 val viewModel: PileViewModel = viewModel(factory = AppViewModelFactory(app))
-                PileListScreen(viewModel)
+                PileListScreen(
+                    viewModel = viewModel,
+                    onPileClick = { pile ->
+                        navController.navigate("swipe_pile/${Uri.encode(pile.folderRelativePath)}")
+                    },
+                )
             }
             composable(
                 route = "swipe_group/{mediaIds}",
@@ -124,6 +130,17 @@ fun AppNavHost(app: ImageManagerApp) {
                 val groupPhotos = app.mediaStoreRepository.listByIds(ids)
                 val viewModel: CardSwipeViewModel = viewModel(
                     factory = AppViewModelFactory(app, cardSwipePhotos = groupPhotos),
+                )
+                CardSwipeScreen(viewModel)
+            }
+            composable(
+                route = "swipe_pile/{relativePath}",
+                arguments = listOf(navArgument("relativePath") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val relativePath = Uri.decode(backStackEntry.arguments?.getString("relativePath").orEmpty())
+                val pilePhotos = app.mediaStoreRepository.listByRelativePath(relativePath)
+                val viewModel: CardSwipeViewModel = viewModel(
+                    factory = AppViewModelFactory(app, cardSwipePhotos = pilePhotos),
                 )
                 CardSwipeScreen(viewModel)
             }

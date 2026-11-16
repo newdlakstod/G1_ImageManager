@@ -54,6 +54,13 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         )
     }
 
+    fun listByRelativePath(relativePath: String): List<Photo> = query(
+        selection = "${MediaStore.Images.Media.RELATIVE_PATH} = ?",
+        selectionArgs = arrayOf(relativePath),
+        offset = 0,
+        limit = Int.MAX_VALUE,
+    )
+
     private fun query(
         selection: String?,
         selectionArgs: Array<String>?,
