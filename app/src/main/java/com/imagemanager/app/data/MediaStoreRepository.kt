@@ -41,6 +41,19 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         limit = Int.MAX_VALUE,
     )
 
+    fun uriFor(mediaId: Long): android.net.Uri = ContentUris.withAppendedId(collection, mediaId)
+
+    fun listByIds(mediaIds: List<Long>): List<Photo> {
+        if (mediaIds.isEmpty()) return emptyList()
+        val placeholders = mediaIds.joinToString(",") { "?" }
+        return query(
+            selection = "${MediaStore.Images.Media._ID} IN ($placeholders)",
+            selectionArgs = mediaIds.map { it.toString() }.toTypedArray(),
+            offset = 0,
+            limit = mediaIds.size,
+        )
+    }
+
     private fun query(
         selection: String?,
         selectionArgs: Array<String>?,
