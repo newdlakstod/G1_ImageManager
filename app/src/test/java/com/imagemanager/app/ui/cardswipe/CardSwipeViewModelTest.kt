@@ -164,6 +164,40 @@ class CardSwipeViewModelTest {
     }
 
     @Test
+    fun refresh_restoresAPhotoThatReappearedInTheProvidedSource() {
+        val actions = FakePhotoActions()
+        val viewModel = CardSwipeViewModel(
+            actions,
+            db.pileDao(),
+            listOf(photo(1), photo(2)),
+            refreshPhotosProvider = { listOf(photo(1), photo(2), photo(3)) },
+        )
+
+        viewModel.jumpTo(2L)
+        viewModel.refresh()
+
+        assertEquals(listOf(1L, 2L, 3L), viewModel.state.value.photos.map { it.mediaId })
+        assertEquals(2L, viewModel.state.value.currentPhoto?.mediaId)
+    }
+
+    @Test
+    fun refresh_clampsIndexWhenCurrentPhotoIsNoLongerInTheProvidedSource() {
+        val actions = FakePhotoActions()
+        val viewModel = CardSwipeViewModel(
+            actions,
+            db.pileDao(),
+            listOf(photo(1), photo(2), photo(3)),
+            refreshPhotosProvider = { listOf(photo(1), photo(2)) },
+        )
+
+        viewModel.jumpTo(3L)
+        viewModel.refresh()
+
+        assertEquals(listOf(1L, 2L), viewModel.state.value.photos.map { it.mediaId })
+        assertEquals(1, viewModel.state.value.currentIndex)
+    }
+
+    @Test
     fun moveNext_and_movePrevious_onlyChangeIndex_noRepositoryCalls() {
         val actions = FakePhotoActions()
         val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1), photo(2)))

@@ -32,6 +32,7 @@ class CardSwipeViewModel(
     private val pileDao: PileDao,
     initialPhotos: List<Photo>,
     private val lastPositionStore: LastPositionStore? = null,
+    private val refreshPhotosProvider: () -> List<Photo> = { initialPhotos },
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CardSwipeUiState(photos = initialPhotos))
@@ -94,6 +95,23 @@ class CardSwipeViewModel(
             )
             selectPile(id)
         }
+    }
+
+    /**
+     * Re-queries MediaStore for the current source (all photos / a pile / a group) and
+     * replaces the in-memory list with it, keeping the current photo in view by mediaId
+     * where possible. Without this, a photo that Google Photos sync restores after being
+     * deleted (or any other out-of-app change) never reappears, since [initialPhotos] is
+     * only fetched once when this ViewModel is created.
+     */
+    fun refresh() {
+        val latest = refreshPhotosProvider()
+        val current = _state.value
+        val currentMediaId = current.currentPhoto?.mediaId
+        val matchedIndex = currentMediaId?.let { id -> latest.indexOfFirst { it.mediaId == id } } ?: -1
+        val newIndex = (if (matchedIndex >= 0) matchedIndex else current.currentIndex)
+            .coerceIn(0, (latest.size - 1).coerceAtLeast(0))
+        setState(current.copy(photos = latest, currentIndex = newIndex))
     }
 
     fun requestTrash(onNeedsConfirmation: (IntentSender) -> Unit) {

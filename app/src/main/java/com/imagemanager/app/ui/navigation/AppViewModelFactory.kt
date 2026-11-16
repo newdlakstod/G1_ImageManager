@@ -14,6 +14,7 @@ class AppViewModelFactory(
     private val app: ImageManagerApp,
     private val cardSwipePhotos: List<Photo> = emptyList(),
     private val restorePosition: Boolean = false,
+    private val refreshCardSwipePhotos: () -> List<Photo> = { cardSwipePhotos },
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -30,6 +31,7 @@ class AppViewModelFactory(
                 app.database.pileDao(),
                 cardSwipePhotos,
                 lastPositionStore = if (restorePosition) app.lastPositionStore else null,
+                refreshPhotosProvider = refreshCardSwipePhotos,
             ) as T
         else -> throw IllegalArgumentException("Unknown ViewModel class: $modelClass")
     }

@@ -90,6 +90,7 @@ fun AppNavHost(app: ImageManagerApp) {
                         app,
                         cardSwipePhotos = app.mediaStoreRepository.listAllPhotos(),
                         restorePosition = true,
+                        refreshCardSwipePhotos = { app.mediaStoreRepository.listAllPhotos() },
                     ),
                 )
                 CardSwipeScreen(
@@ -131,7 +132,11 @@ fun AppNavHost(app: ImageManagerApp) {
                     ?: emptyList()
                 val groupPhotos = app.mediaStoreRepository.listByIds(ids)
                 val viewModel: CardSwipeViewModel = viewModel(
-                    factory = AppViewModelFactory(app, cardSwipePhotos = groupPhotos),
+                    factory = AppViewModelFactory(
+                        app,
+                        cardSwipePhotos = groupPhotos,
+                        refreshCardSwipePhotos = { app.mediaStoreRepository.listByIds(ids) },
+                    ),
                 )
                 CardSwipeScreen(
                     viewModel = viewModel,
@@ -147,7 +152,11 @@ fun AppNavHost(app: ImageManagerApp) {
                 val relativePath = Uri.decode(backStackEntry.arguments?.getString("relativePath").orEmpty())
                 val pilePhotos = app.mediaStoreRepository.listByRelativePath(relativePath)
                 val viewModel: CardSwipeViewModel = viewModel(
-                    factory = AppViewModelFactory(app, cardSwipePhotos = pilePhotos),
+                    factory = AppViewModelFactory(
+                        app,
+                        cardSwipePhotos = pilePhotos,
+                        refreshCardSwipePhotos = { app.mediaStoreRepository.listByRelativePath(relativePath) },
+                    ),
                 )
                 CardSwipeScreen(
                     viewModel = viewModel,
