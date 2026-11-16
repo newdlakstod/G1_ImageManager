@@ -180,11 +180,6 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
             }
         } else {
             val selectedPile = piles.find { it.pileId == state.currentPileId }
-            AssistChip(
-                onClick = { showPilePicker = true },
-                label = { Text(selectedPile?.name ?: "폴더 선택") },
-                modifier = Modifier.align(Alignment.TopCenter).padding(16.dp),
-            )
 
             val photo = state.currentPhoto
             if (photo == null) {
@@ -279,6 +274,12 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                         },
                 )
             }
+
+            AssistChip(
+                onClick = { showPilePicker = true },
+                label = { Text(selectedPile?.name ?: "폴더 선택") },
+                modifier = Modifier.align(Alignment.TopCenter).padding(16.dp),
+            )
 
             if (state.photos.size > 1) {
                 Column(
