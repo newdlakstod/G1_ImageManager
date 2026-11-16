@@ -106,6 +106,12 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
             vibrator?.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE))
         }
     }
+    LaunchedEffect(viewModel) {
+        viewModel.pileMovedEvents.collect {
+            val vibrator = context.getSystemService(Vibrator::class.java)
+            vibrator?.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE))
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (showGrid) {

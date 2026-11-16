@@ -47,6 +47,9 @@ class CardSwipeViewModel(
     private val _favoriteToggledEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
     val favoriteToggledEvents: SharedFlow<Boolean> = _favoriteToggledEvents
 
+    private val _pileMovedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val pileMovedEvents: SharedFlow<Unit> = _pileMovedEvents
+
     private var pendingConfirmation: (() -> Unit)? = null
 
     init {
@@ -138,8 +141,12 @@ class CardSwipeViewModel(
         val sender = photoActions.movePhotoToPile(photo.mediaId, pile)
         if (sender == null) {
             removeCurrentPhoto()
+            _pileMovedEvents.tryEmit(Unit)
         } else {
-            pendingConfirmation = { removeCurrentPhoto() }
+            pendingConfirmation = {
+                removeCurrentPhoto()
+                _pileMovedEvents.tryEmit(Unit)
+            }
             onNeedsConfirmation(sender)
         }
     }

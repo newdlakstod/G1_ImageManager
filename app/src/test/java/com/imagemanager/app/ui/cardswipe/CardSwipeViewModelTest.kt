@@ -12,6 +12,7 @@ import com.imagemanager.app.data.db.PileEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -323,6 +324,59 @@ class CardSwipeViewModelTest {
 
         assertTrue(noPileCalled)
         assertEquals(0, actions.moveCallCount)
+    }
+
+    @Test
+    fun requestMoveToCurrentPile_emitsPileMovedEventWhenAppliedDirectly() = runTest(testDispatcher) {
+        val actions = FakePhotoActions(moveSender = null)
+        val pileId = db.pileDao().insert(
+            PileEntity(name = "Trip", folderRelativePath = "Pictures/Piles/Trip", createdAt = 0L),
+        )
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1)))
+        viewModel.piles.launchIn(backgroundScope)
+        advanceUntilIdle()
+        viewModel.selectPile(pileId)
+
+        val emitted = mutableListOf<Unit>()
+        val job = launch {
+            viewModel.pileMovedEvents.collect { emitted.add(it) }
+        }
+        advanceUntilIdle()
+
+        viewModel.requestMoveToCurrentPile(onNeedsConfirmation = { }, onNoPileSelected = { })
+        advanceUntilIdle()
+
+        assertEquals(1, emitted.size)
+        assertEquals(1, actions.moveCallCount)
+        job.cancel()
+    }
+
+    @Test
+    fun requestMoveToCurrentPile_emitsPileMovedEventOnlyAfterConfirmationResultIsTrue() = runTest(testDispatcher) {
+        val moveSender = Mockito.mock(IntentSender::class.java)
+        val actions = FakePhotoActions(moveSender = moveSender)
+        val pileId = db.pileDao().insert(
+            PileEntity(name = "Trip", folderRelativePath = "Pictures/Piles/Trip", createdAt = 0L),
+        )
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1)))
+        viewModel.piles.launchIn(backgroundScope)
+        advanceUntilIdle()
+        viewModel.selectPile(pileId)
+
+        val emitted = mutableListOf<Unit>()
+        val job = launch {
+            viewModel.pileMovedEvents.collect { emitted.add(it) }
+        }
+        advanceUntilIdle()
+
+        viewModel.requestMoveToCurrentPile(onNeedsConfirmation = { }, onNoPileSelected = { })
+        advanceUntilIdle()
+        assertEquals(0, emitted.size)
+
+        viewModel.onConfirmationResult(confirmed = true)
+        advanceUntilIdle()
+        assertEquals(1, emitted.size)
+        job.cancel()
     }
 
     @Test
