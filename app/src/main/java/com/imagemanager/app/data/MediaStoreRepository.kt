@@ -33,6 +33,13 @@ class MediaStoreRepository(private val context: Context) {
             limit = limit,
         )
 
+    fun listAllPhotos(): List<Photo> = query(
+        selection = null,
+        selectionArgs = null,
+        offset = 0,
+        limit = Int.MAX_VALUE,
+    )
+
     private fun query(
         selection: String?,
         selectionArgs: Array<String>?,
