@@ -44,6 +44,9 @@ class CardSwipeViewModel(
     private val _trashConfirmedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val trashConfirmedEvents: SharedFlow<Unit> = _trashConfirmedEvents
 
+    private val _favoriteToggledEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    val favoriteToggledEvents: SharedFlow<Boolean> = _favoriteToggledEvents
+
     private var pendingConfirmation: (() -> Unit)? = null
 
     init {
@@ -170,6 +173,7 @@ class CardSwipeViewModel(
         val updated = current.photos.toMutableList()
         updated[index] = updated[index].copy(isFavorite = favorite)
         setState(current.copy(photos = updated))
+        _favoriteToggledEvents.tryEmit(favorite)
     }
 
     private fun advance() {

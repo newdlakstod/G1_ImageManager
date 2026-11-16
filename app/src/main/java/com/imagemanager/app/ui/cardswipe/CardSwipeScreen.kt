@@ -64,6 +64,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.imagemanager.app.ui.common.FavoriteBadge
 import com.imagemanager.app.ui.piles.PilePickerSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -97,6 +98,12 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
             vibrator?.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE))
         }
     }
+    LaunchedEffect(viewModel) {
+        viewModel.favoriteToggledEvents.collect {
+            val vibrator = context.getSystemService(Vibrator::class.java)
+            vibrator?.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE))
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (showGrid) {
@@ -112,10 +119,7 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
             ) {
                 items(state.photos, key = { it.mediaId }) { gridPhoto ->
                     val isSelected = gridPhoto.mediaId in selectedIds
-                    AsyncImage(
-                        model = gridPhoto.uri,
-                        contentDescription = gridPhoto.displayName,
-                        contentScale = ContentScale.Crop,
+                    Box(
                         modifier = Modifier
                             .aspectRatio(1f)
                             .padding(1.dp)
@@ -145,7 +149,17 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                                     }
                                 },
                             ),
-                    )
+                    ) {
+                        AsyncImage(
+                            model = gridPhoto.uri,
+                            contentDescription = gridPhoto.displayName,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        if (gridPhoto.isFavorite) {
+                            FavoriteBadge(modifier = Modifier.align(Alignment.TopStart))
+                        }
+                    }
                 }
             }
             VerticalFastScrollBar(
@@ -273,6 +287,9 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                             }
                         },
                 )
+                if (photo.isFavorite) {
+                    FavoriteBadge(modifier = Modifier.align(Alignment.TopStart))
+                }
             }
 
             AssistChip(

@@ -12,6 +12,7 @@ import com.imagemanager.app.data.db.PileEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -193,6 +194,26 @@ class CardSwipeViewModelTest {
 
         assertFalse(confirmationRequested)
         assertTrue(viewModel.state.value.currentPhoto!!.isFavorite)
+    }
+
+    @Test
+    fun toggleFavorite_emitsFavoriteToggledEventWithNewState() = runTest(testDispatcher) {
+        val actions = FakePhotoActions(favoriteSender = null)
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1)))
+
+        val emitted = mutableListOf<Boolean>()
+        val job = launch {
+            viewModel.favoriteToggledEvents.collect { emitted.add(it) }
+        }
+        advanceUntilIdle()
+
+        viewModel.toggleFavorite { }
+        advanceUntilIdle()
+        viewModel.toggleFavorite { }
+        advanceUntilIdle()
+
+        assertEquals(listOf(true, false), emitted)
+        job.cancel()
     }
 
     @Test
