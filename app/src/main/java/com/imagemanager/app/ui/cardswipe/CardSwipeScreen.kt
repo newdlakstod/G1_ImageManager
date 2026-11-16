@@ -7,9 +7,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -101,7 +103,6 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                 Text("더 이상 사진이 없습니다", modifier = Modifier.align(Alignment.Center))
             } else {
                 var dragOffset by remember(photo.mediaId) { mutableStateOf(Offset.Zero) }
-                var cumulativeZoom by remember(photo.mediaId) { mutableFloatStateOf(1f) }
                 AsyncImage(
                     model = photo.uri,
                     contentDescription = photo.displayName,
@@ -143,11 +144,24 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                             )
                         }
                         .pointerInput(photo.mediaId) {
-                            detectTransformGestures { _, _, zoom, _ ->
-                                cumulativeZoom *= zoom
-                                if (cumulativeZoom < PINCH_TO_GRID_ZOOM_THRESHOLD) {
-                                    showGrid = true
-                                    cumulativeZoom = 1f
+                            // Only reacts once a second finger is down, so single-finger
+                            // swipes above are never consumed/interfered with by this block.
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                var zoom = 1f
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.changes.size >= 2) {
+                                        zoom *= event.calculateZoom()
+                                        if (zoom < PINCH_TO_GRID_ZOOM_THRESHOLD) {
+                                            showGrid = true
+                                            zoom = 1f
+                                        }
+                                        event.changes.forEach { change ->
+                                            if (change.positionChanged()) change.consume()
+                                        }
+                                    }
+                                    if (event.changes.none { it.pressed }) break
                                 }
                             }
                         },
