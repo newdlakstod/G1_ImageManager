@@ -9,9 +9,10 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
+import com.imagemanager.app.data.db.PileEntity
 
 @RequiresApi(Build.VERSION_CODES.R)
-class MediaStoreRepository(private val context: Context) {
+class MediaStoreRepository(private val context: Context) : PhotoActions {
 
     private val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
 
@@ -74,7 +75,7 @@ class MediaStoreRepository(private val context: Context) {
         return photos
     }
 
-    fun toggleFavorite(mediaId: Long, favorite: Boolean): IntentSender? {
+    override fun toggleFavorite(mediaId: Long, favorite: Boolean): IntentSender? {
         val uri = ContentUris.withAppendedId(collection, mediaId)
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.IS_FAVORITE, if (favorite) 1 else 0)
@@ -87,8 +88,21 @@ class MediaStoreRepository(private val context: Context) {
         }
     }
 
-    fun requestTrash(mediaIds: List<Long>): IntentSender {
+    override fun requestTrash(mediaIds: List<Long>): IntentSender {
         val uris = mediaIds.map { ContentUris.withAppendedId(collection, it) }
         return MediaStore.createTrashRequest(context.contentResolver, uris, true).intentSender
+    }
+
+    override fun movePhotoToPile(mediaId: Long, pile: PileEntity): IntentSender? {
+        val uri = ContentUris.withAppendedId(collection, mediaId)
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.RELATIVE_PATH, pile.folderRelativePath)
+        }
+        return try {
+            context.contentResolver.update(uri, values, null, null)
+            null
+        } catch (e: SecurityException) {
+            MediaStore.createWriteRequest(context.contentResolver, listOf(uri)).intentSender
+        }
     }
 }
