@@ -112,6 +112,21 @@ class CardSwipeViewModelTest {
     }
 
     @Test
+    fun jumpToIndex_clampsWithinPhotosRange() {
+        val actions = FakePhotoActions()
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1), photo(2), photo(3)))
+
+        viewModel.jumpToIndex(1)
+        assertEquals(1, viewModel.state.value.currentIndex)
+
+        viewModel.jumpToIndex(99)
+        assertEquals(2, viewModel.state.value.currentIndex)
+
+        viewModel.jumpToIndex(-5)
+        assertEquals(0, viewModel.state.value.currentIndex)
+    }
+
+    @Test
     fun moveNext_and_movePrevious_onlyChangeIndex_noRepositoryCalls() {
         val actions = FakePhotoActions()
         val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1), photo(2)))

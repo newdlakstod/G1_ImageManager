@@ -16,13 +16,14 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -171,6 +172,18 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                 )
             }
 
+            if (state.photos.size > 1) {
+                Slider(
+                    value = state.currentIndex.toFloat(),
+                    onValueChange = { viewModel.jumpToIndex(it.roundToInt()) },
+                    valueRange = 0f..(state.photos.size - 1).toFloat(),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                )
+            }
+
             if (showPilePicker) {
                 PilePickerSheet(
                     piles = piles,
@@ -195,14 +208,11 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                     contentColor = Color.White,
                     shadowElevation = 8.dp,
                 ) {
-                    TextButton(
-                        onClick = {
-                            viewModel.undoLastTrash {
-                                confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
-                            }
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF8AB4FF)),
-                    ) {
+                    TextButton(onClick = {
+                        viewModel.undoLastTrash {
+                            confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
+                        }
+                    }) {
                         Text("실행 취소")
                     }
                 }

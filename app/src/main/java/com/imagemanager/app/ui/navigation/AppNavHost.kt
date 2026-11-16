@@ -1,6 +1,13 @@
 package com.imagemanager.app.ui.navigation
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Compare
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -11,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -31,12 +39,12 @@ import com.imagemanager.app.ui.piles.PileViewModel
 import com.imagemanager.app.ui.similar.SimilarGroupsScreen
 import com.imagemanager.app.ui.similar.SimilarGroupsViewModel
 
-private sealed class Tab(val route: String, val label: String) {
-    object Swipe : Tab("swipe", "정리")
-    object Grid : Tab("grid", "전체")
-    object Favorites : Tab("favorites", "즐겨찾기")
-    object Similar : Tab("similar", "유사 사진")
-    object Piles : Tab("piles", "폴더함")
+private sealed class Tab(val route: String, val label: String, val icon: ImageVector) {
+    object Swipe : Tab("swipe", "정리", Icons.Filled.SwapVert)
+    object Grid : Tab("grid", "전체", Icons.Filled.GridView)
+    object Favorites : Tab("favorites", "즐겨찾기", Icons.Filled.Favorite)
+    object Similar : Tab("similar", "유사 사진", Icons.Filled.Compare)
+    object Piles : Tab("piles", "폴더함", Icons.Filled.Folder)
 }
 
 private val tabs = listOf(Tab.Swipe, Tab.Grid, Tab.Favorites, Tab.Similar, Tab.Piles)
@@ -66,7 +74,7 @@ fun AppNavHost(app: ImageManagerApp) {
                                 launchSingleTop = true
                             }
                         },
-                        icon = {},
+                        icon = { Icon(tab.icon, contentDescription = tab.label) },
                         label = { Text(tab.label) },
                     )
                 }
