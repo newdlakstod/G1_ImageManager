@@ -6,8 +6,10 @@ import android.os.Vibrator
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
@@ -16,6 +18,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -74,8 +77,9 @@ private const val MAX_PHOTO_SCALE = 4f
 
 private val SWIPE_THRESHOLD_DP = 96.dp
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
+fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Long>) -> Unit = {}) {
     val state by viewModel.state.collectAsState()
     val piles by viewModel.piles.collectAsState()
     var showPilePicker by remember { mutableStateOf(false) }
@@ -98,12 +102,16 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
         if (showGrid) {
             val gridState = rememberLazyGridState()
             val coroutineScope = rememberCoroutineScope()
+            var selectionMode by remember { mutableStateOf(false) }
+            var selectedIds by remember { mutableStateOf(setOf<Long>()) }
+
             LazyVerticalGrid(
                 state = gridState,
                 columns = GridCells.Fixed(3),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 items(state.photos, key = { it.mediaId }) { gridPhoto ->
+                    val isSelected = gridPhoto.mediaId in selectedIds
                     AsyncImage(
                         model = gridPhoto.uri,
                         contentDescription = gridPhoto.displayName,
@@ -111,10 +119,32 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                         modifier = Modifier
                             .aspectRatio(1f)
                             .padding(1.dp)
-                            .clickable {
-                                viewModel.jumpTo(gridPhoto.mediaId)
-                                showGrid = false
-                            },
+                            .then(
+                                if (isSelected) {
+                                    Modifier.border(3.dp, MaterialTheme.colorScheme.primary)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .combinedClickable(
+                                onClick = {
+                                    if (selectionMode) {
+                                        selectedIds = if (isSelected) {
+                                            selectedIds - gridPhoto.mediaId
+                                        } else {
+                                            selectedIds + gridPhoto.mediaId
+                                        }
+                                    } else {
+                                        viewModel.jumpTo(gridPhoto.mediaId)
+                                        showGrid = false
+                                    }
+                                },
+                                onLongClick = {
+                                    viewModel.toggleFavoriteFor(gridPhoto.mediaId) {
+                                        confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
+                                    }
+                                },
+                            ),
                     )
                 }
             }
@@ -123,6 +153,31 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                 onJumpTo = { index -> coroutineScope.launch { gridState.scrollToItem(index) } },
                 modifier = Modifier.align(Alignment.CenterEnd),
             )
+            AssistChip(
+                onClick = {
+                    selectionMode = !selectionMode
+                    if (!selectionMode) selectedIds = emptySet()
+                },
+                label = { Text(if (selectionMode) "선택 모드 끄기" else "여러 장 선택") },
+                modifier = Modifier.align(Alignment.TopCenter).padding(16.dp),
+            )
+            if (selectedIds.isNotEmpty()) {
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                    shape = RoundedCornerShape(50),
+                    shadowElevation = 8.dp,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp)) {
+                        Text("${selectedIds.size}장 선택됨")
+                        TextButton(onClick = { selectedIds = emptySet() }) { Text("취소") }
+                        Button(
+                            onClick = { onCompareRequested(selectedIds.toList()) },
+                            enabled = selectedIds.size >= 2,
+                            modifier = Modifier.padding(end = 8.dp),
+                        ) { Text("비교") }
+                    }
+                }
+            }
         } else {
             val selectedPile = piles.find { it.pileId == state.currentPileId }
             AssistChip(

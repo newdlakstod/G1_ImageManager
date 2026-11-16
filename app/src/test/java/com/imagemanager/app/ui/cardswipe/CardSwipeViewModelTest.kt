@@ -4,6 +4,7 @@ import android.content.IntentSender
 import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.imagemanager.app.data.LastPositionStore
 import com.imagemanager.app.data.Photo
 import com.imagemanager.app.data.PhotoActions
 import com.imagemanager.app.data.db.AppDatabase
@@ -90,6 +91,46 @@ class CardSwipeViewModelTest {
         override fun listGalleryFolders(): List<com.imagemanager.app.data.GalleryFolder> = emptyList()
     }
 
+    private class FakeLastPositionStore(initial: Long? = null) : LastPositionStore {
+        var saved: Long? = initial
+            private set
+
+        override fun save(mediaId: Long) {
+            saved = mediaId
+        }
+
+        override fun load(): Long? = saved
+    }
+
+    @Test
+    fun init_withLastPositionStore_jumpsToSavedMediaId() {
+        val store = FakeLastPositionStore(initial = 3L)
+        val viewModel = CardSwipeViewModel(
+            FakePhotoActions(),
+            db.pileDao(),
+            listOf(photo(1), photo(2), photo(3)),
+            lastPositionStore = store,
+        )
+
+        assertEquals(2, viewModel.state.value.currentIndex)
+        assertEquals(3L, viewModel.state.value.currentPhoto?.mediaId)
+    }
+
+    @Test
+    fun navigating_withLastPositionStore_savesCurrentMediaId() {
+        val store = FakeLastPositionStore()
+        val viewModel = CardSwipeViewModel(
+            FakePhotoActions(),
+            db.pileDao(),
+            listOf(photo(1), photo(2)),
+            lastPositionStore = store,
+        )
+
+        viewModel.moveNext()
+
+        assertEquals(2L, store.saved)
+    }
+
     @Test
     fun jumpTo_movesCurrentIndexToMatchingPhoto() {
         val actions = FakePhotoActions()
@@ -152,6 +193,18 @@ class CardSwipeViewModelTest {
 
         assertFalse(confirmationRequested)
         assertTrue(viewModel.state.value.currentPhoto!!.isFavorite)
+    }
+
+    @Test
+    fun toggleFavoriteFor_updatesNonCurrentPhotoWithoutChangingCurrentIndex() {
+        val actions = FakePhotoActions(favoriteSender = null)
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1), photo(2)))
+
+        viewModel.toggleFavoriteFor(2L) { }
+
+        assertEquals(0, viewModel.state.value.currentIndex)
+        assertTrue(viewModel.state.value.photos.first { it.mediaId == 2L }.isFavorite)
+        assertFalse(viewModel.state.value.currentPhoto!!.isFavorite)
     }
 
     @Test

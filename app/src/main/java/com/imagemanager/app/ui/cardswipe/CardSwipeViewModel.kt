@@ -3,6 +3,7 @@ package com.imagemanager.app.ui.cardswipe
 import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.imagemanager.app.data.LastPositionStore
 import com.imagemanager.app.data.Photo
 import com.imagemanager.app.data.PhotoActions
 import com.imagemanager.app.data.db.PileDao
@@ -31,6 +32,7 @@ class CardSwipeViewModel(
     private val photoActions: PhotoActions,
     private val pileDao: PileDao,
     initialPhotos: List<Photo>,
+    private val lastPositionStore: LastPositionStore? = null,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CardSwipeUiState(photos = initialPhotos))
@@ -45,6 +47,7 @@ class CardSwipeViewModel(
     private var pendingConfirmation: (() -> Unit)? = null
 
     init {
+        lastPositionStore?.load()?.let { mediaId -> jumpTo(mediaId) }
         viewModelScope.launch {
             syncPilesWithGalleryFolders(pileDao, photoActions)
         }
@@ -56,18 +59,18 @@ class CardSwipeViewModel(
 
     fun movePrevious() {
         val current = _state.value
-        if (current.currentIndex > 0) _state.value = current.copy(currentIndex = current.currentIndex - 1)
+        if (current.currentIndex > 0) setState(current.copy(currentIndex = current.currentIndex - 1))
     }
 
     fun jumpTo(mediaId: Long) {
         val index = _state.value.photos.indexOfFirst { it.mediaId == mediaId }
-        if (index >= 0) _state.value = _state.value.copy(currentIndex = index)
+        if (index >= 0) setState(_state.value.copy(currentIndex = index))
     }
 
     fun jumpToIndex(index: Int) {
         val current = _state.value
         val clamped = index.coerceIn(0, (current.photos.size - 1).coerceAtLeast(0))
-        _state.value = current.copy(currentIndex = clamped)
+        setState(current.copy(currentIndex = clamped))
     }
 
     fun selectPile(pileId: Long) {
@@ -116,7 +119,7 @@ class CardSwipeViewModel(
         val current = _state.value
         val updated = current.photos.toMutableList()
         updated.add(current.currentIndex.coerceIn(0, updated.size), photo)
-        _state.value = current.copy(photos = updated, lastTrashed = null)
+        setState(current.copy(photos = updated, lastTrashed = null))
     }
 
     fun requestMoveToCurrentPile(
@@ -140,12 +143,17 @@ class CardSwipeViewModel(
 
     fun toggleFavorite(onNeedsConfirmation: (IntentSender) -> Unit) {
         val photo = _state.value.currentPhoto ?: return
+        toggleFavoriteFor(photo.mediaId, onNeedsConfirmation)
+    }
+
+    fun toggleFavoriteFor(mediaId: Long, onNeedsConfirmation: (IntentSender) -> Unit) {
+        val photo = _state.value.photos.find { it.mediaId == mediaId } ?: return
         val newFavorite = !photo.isFavorite
-        val sender = photoActions.toggleFavorite(photo.mediaId, newFavorite)
+        val sender = photoActions.toggleFavorite(mediaId, newFavorite)
         if (sender == null) {
-            applyFavorite(newFavorite)
+            applyFavoriteFor(mediaId, newFavorite)
         } else {
-            pendingConfirmation = { applyFavorite(newFavorite) }
+            pendingConfirmation = { applyFavoriteFor(mediaId, newFavorite) }
             onNeedsConfirmation(sender)
         }
     }
@@ -155,16 +163,17 @@ class CardSwipeViewModel(
         pendingConfirmation = null
     }
 
-    private fun applyFavorite(favorite: Boolean) {
+    private fun applyFavoriteFor(mediaId: Long, favorite: Boolean) {
         val current = _state.value
-        val index = current.currentIndex
+        val index = current.photos.indexOfFirst { it.mediaId == mediaId }
+        if (index < 0) return
         val updated = current.photos.toMutableList()
-        updated.getOrNull(index)?.let { updated[index] = it.copy(isFavorite = favorite) }
-        _state.value = current.copy(photos = updated)
+        updated[index] = updated[index].copy(isFavorite = favorite)
+        setState(current.copy(photos = updated))
     }
 
     private fun advance() {
-        _state.value = _state.value.copy(currentIndex = _state.value.currentIndex + 1)
+        setState(_state.value.copy(currentIndex = _state.value.currentIndex + 1))
     }
 
     private fun removeCurrentPhoto() {
@@ -173,6 +182,11 @@ class CardSwipeViewModel(
         if (index !in current.photos.indices) return
         val updated = current.photos.toMutableList()
         updated.removeAt(index)
-        _state.value = current.copy(photos = updated)
+        setState(current.copy(photos = updated))
+    }
+
+    private fun setState(newState: CardSwipeUiState) {
+        _state.value = newState
+        newState.currentPhoto?.let { lastPositionStore?.save(it.mediaId) }
     }
 }

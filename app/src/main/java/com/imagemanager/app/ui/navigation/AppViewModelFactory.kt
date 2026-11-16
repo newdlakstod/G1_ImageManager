@@ -7,19 +7,17 @@ import com.imagemanager.app.ImageManagerApp
 import com.imagemanager.app.data.Photo
 import com.imagemanager.app.ui.cardswipe.CardSwipeViewModel
 import com.imagemanager.app.ui.favorites.FavoritesViewModel
-import com.imagemanager.app.ui.grid.PhotoGridViewModel
 import com.imagemanager.app.ui.piles.PileViewModel
 import com.imagemanager.app.ui.similar.SimilarGroupsViewModel
 
 class AppViewModelFactory(
     private val app: ImageManagerApp,
     private val cardSwipePhotos: List<Photo> = emptyList(),
+    private val restorePosition: Boolean = false,
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T = when (modelClass) {
-        PhotoGridViewModel::class.java ->
-            PhotoGridViewModel(app.mediaStoreRepository) as T
         FavoritesViewModel::class.java ->
             FavoritesViewModel(app.mediaStoreRepository) as T
         PileViewModel::class.java ->
@@ -27,7 +25,12 @@ class AppViewModelFactory(
         SimilarGroupsViewModel::class.java ->
             SimilarGroupsViewModel(app.duplicateScanner, app.database.duplicateGroupDao()) as T
         CardSwipeViewModel::class.java ->
-            CardSwipeViewModel(app.mediaStoreRepository, app.database.pileDao(), cardSwipePhotos) as T
+            CardSwipeViewModel(
+                app.mediaStoreRepository,
+                app.database.pileDao(),
+                cardSwipePhotos,
+                lastPositionStore = if (restorePosition) app.lastPositionStore else null,
+            ) as T
         else -> throw IllegalArgumentException("Unknown ViewModel class: $modelClass")
     }
 }

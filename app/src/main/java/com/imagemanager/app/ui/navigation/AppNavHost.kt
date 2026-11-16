@@ -6,7 +6,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -30,10 +29,9 @@ import androidx.navigation.navArgument
 import com.imagemanager.app.ImageManagerApp
 import com.imagemanager.app.ui.cardswipe.CardSwipeScreen
 import com.imagemanager.app.ui.cardswipe.CardSwipeViewModel
+import com.imagemanager.app.ui.compare.ComparisonScreen
 import com.imagemanager.app.ui.favorites.FavoritesScreen
 import com.imagemanager.app.ui.favorites.FavoritesViewModel
-import com.imagemanager.app.ui.grid.PhotoGridScreen
-import com.imagemanager.app.ui.grid.PhotoGridViewModel
 import com.imagemanager.app.ui.permissions.PermissionGateScreen
 import com.imagemanager.app.ui.piles.PileListScreen
 import com.imagemanager.app.ui.piles.PileViewModel
@@ -42,13 +40,12 @@ import com.imagemanager.app.ui.similar.SimilarGroupsViewModel
 
 private sealed class Tab(val route: String, val label: String, val icon: ImageVector) {
     object Swipe : Tab("swipe", "정리", Icons.Filled.SwapVert)
-    object Grid : Tab("grid", "전체", Icons.Filled.GridView)
     object Favorites : Tab("favorites", "즐겨찾기", Icons.Filled.Favorite)
     object Similar : Tab("similar", "유사 사진", Icons.Filled.Compare)
     object Piles : Tab("piles", "폴더함", Icons.Filled.Folder)
 }
 
-private val tabs = listOf(Tab.Swipe, Tab.Grid, Tab.Favorites, Tab.Similar, Tab.Piles)
+private val tabs = listOf(Tab.Swipe, Tab.Favorites, Tab.Similar, Tab.Piles)
 
 @Composable
 fun AppNavHost(app: ImageManagerApp) {
@@ -89,13 +86,18 @@ fun AppNavHost(app: ImageManagerApp) {
         ) {
             composable(Tab.Swipe.route) {
                 val viewModel: CardSwipeViewModel = viewModel(
-                    factory = AppViewModelFactory(app, cardSwipePhotos = app.mediaStoreRepository.listAllPhotos()),
+                    factory = AppViewModelFactory(
+                        app,
+                        cardSwipePhotos = app.mediaStoreRepository.listAllPhotos(),
+                        restorePosition = true,
+                    ),
                 )
-                CardSwipeScreen(viewModel)
-            }
-            composable(Tab.Grid.route) {
-                val viewModel: PhotoGridViewModel = viewModel(factory = AppViewModelFactory(app))
-                PhotoGridScreen(viewModel, onPhotoClick = {})
+                CardSwipeScreen(
+                    viewModel = viewModel,
+                    onCompareRequested = { mediaIds ->
+                        navController.navigate("compare/${mediaIds.joinToString(",")}")
+                    },
+                )
             }
             composable(Tab.Favorites.route) {
                 val viewModel: FavoritesViewModel = viewModel(factory = AppViewModelFactory(app))
@@ -131,7 +133,12 @@ fun AppNavHost(app: ImageManagerApp) {
                 val viewModel: CardSwipeViewModel = viewModel(
                     factory = AppViewModelFactory(app, cardSwipePhotos = groupPhotos),
                 )
-                CardSwipeScreen(viewModel)
+                CardSwipeScreen(
+                    viewModel = viewModel,
+                    onCompareRequested = { compareIds ->
+                        navController.navigate("compare/${compareIds.joinToString(",")}")
+                    },
+                )
             }
             composable(
                 route = "swipe_pile/{relativePath}",
@@ -142,7 +149,21 @@ fun AppNavHost(app: ImageManagerApp) {
                 val viewModel: CardSwipeViewModel = viewModel(
                     factory = AppViewModelFactory(app, cardSwipePhotos = pilePhotos),
                 )
-                CardSwipeScreen(viewModel)
+                CardSwipeScreen(
+                    viewModel = viewModel,
+                    onCompareRequested = { compareIds ->
+                        navController.navigate("compare/${compareIds.joinToString(",")}")
+                    },
+                )
+            }
+            composable(
+                route = "compare/{mediaIds}",
+                arguments = listOf(navArgument("mediaIds") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val ids = backStackEntry.arguments?.getString("mediaIds")
+                    ?.split(",")?.mapNotNull { it.toLongOrNull() }
+                    ?: emptyList()
+                ComparisonScreen(photos = app.mediaStoreRepository.listByIds(ids))
             }
         }
     }

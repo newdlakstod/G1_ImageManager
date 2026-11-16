@@ -1,7 +1,9 @@
 package com.imagemanager.app
 
 import android.app.Application
+import com.imagemanager.app.data.LastPositionStore
 import com.imagemanager.app.data.MediaStoreRepository
+import com.imagemanager.app.data.SharedPrefsLastPositionStore
 import com.imagemanager.app.data.db.AppDatabase
 import com.imagemanager.app.domain.BitmapPhotoHasher
 import com.imagemanager.app.domain.DuplicateScanner
@@ -12,6 +14,8 @@ class ImageManagerApp : Application() {
     lateinit var database: AppDatabase
         private set
     lateinit var duplicateScanner: DuplicateScanner
+        private set
+    lateinit var lastPositionStore: LastPositionStore
         private set
 
     override fun onCreate() {
@@ -24,5 +28,6 @@ class ImageManagerApp : Application() {
             hashDao = database.photoHashDao(),
             groupDao = database.duplicateGroupDao(),
         )
+        lastPositionStore = SharedPrefsLastPositionStore(this)
     }
 }
