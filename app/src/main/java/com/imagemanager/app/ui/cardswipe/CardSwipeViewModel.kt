@@ -92,7 +92,6 @@ class CardSwipeViewModel(
         val photo = _state.value.currentPhoto ?: return
         val sender = photoActions.requestTrash(listOf(photo.mediaId))
         pendingConfirmation = {
-            photoActions.confirmTrash(listOf(photo.mediaId))
             advance()
             _state.value = _state.value.copy(lastTrashed = photo)
             _trashConfirmedEvents.tryEmit(Unit)
@@ -103,10 +102,7 @@ class CardSwipeViewModel(
     fun undoLastTrash(onNeedsConfirmation: (IntentSender) -> Unit) {
         val photo = _state.value.lastTrashed ?: return
         val sender = photoActions.requestUntrash(listOf(photo.mediaId))
-        pendingConfirmation = {
-            photoActions.confirmUntrash(listOf(photo.mediaId))
-            restoreTrashedPhoto(photo)
-        }
+        pendingConfirmation = { restoreTrashedPhoto(photo) }
         onNeedsConfirmation(sender)
     }
 

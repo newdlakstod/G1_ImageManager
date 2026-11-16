@@ -66,8 +66,6 @@ class CardSwipeViewModelTest {
         var untrashCallCount = 0
         var favoriteCallCount = 0
         var moveCallCount = 0
-        var confirmTrashCallCount = 0
-        var confirmUntrashCallCount = 0
 
         override fun toggleFavorite(mediaId: Long, favorite: Boolean): IntentSender? {
             favoriteCallCount++
@@ -90,14 +88,6 @@ class CardSwipeViewModelTest {
         }
 
         override fun listGalleryFolders(): List<com.imagemanager.app.data.GalleryFolder> = emptyList()
-
-        override fun confirmTrash(mediaIds: List<Long>) {
-            confirmTrashCallCount++
-        }
-
-        override fun confirmUntrash(mediaIds: List<Long>) {
-            confirmUntrashCallCount++
-        }
     }
 
     @Test
@@ -182,7 +172,6 @@ class CardSwipeViewModelTest {
         viewModel.onConfirmationResult(confirmed = true)
         assertEquals(1, viewModel.state.value.currentIndex)
         assertEquals(1L, viewModel.state.value.lastTrashed?.mediaId)
-        assertEquals(1, actions.confirmTrashCallCount)
     }
 
     @Test
@@ -203,7 +192,6 @@ class CardSwipeViewModelTest {
         viewModel.onConfirmationResult(confirmed = true)
 
         assertEquals(1, actions.untrashCallCount)
-        assertEquals(1, actions.confirmUntrashCallCount)
         assertEquals(null, viewModel.state.value.lastTrashed)
         assertEquals(1L, viewModel.state.value.currentPhoto?.mediaId)
     }

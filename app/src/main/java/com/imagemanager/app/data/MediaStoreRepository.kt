@@ -118,25 +118,6 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         return MediaStore.createTrashRequest(context.contentResolver, uris, false).intentSender
     }
 
-    override fun confirmTrash(mediaIds: List<Long>) = setTrashed(mediaIds, trashed = true)
-
-    override fun confirmUntrash(mediaIds: List<Long>) = setTrashed(mediaIds, trashed = false)
-
-    private fun setTrashed(mediaIds: List<Long>, trashed: Boolean) {
-        val values = ContentValues().apply {
-            put(MediaStore.Images.Media.IS_TRASHED, if (trashed) 1 else 0)
-        }
-        mediaIds.forEach { mediaId ->
-            try {
-                val uri = ContentUris.withAppendedId(collection, mediaId)
-                context.contentResolver.update(uri, values, null, null)
-            } catch (e: SecurityException) {
-                // Permission wasn't actually granted after all; nothing more we can do here
-                // without launching another confirmation flow.
-            }
-        }
-    }
-
     override fun movePhotoToPile(mediaId: Long, pile: PileEntity): IntentSender? {
         val uri = ContentUris.withAppendedId(collection, mediaId)
         val values = ContentValues().apply {
