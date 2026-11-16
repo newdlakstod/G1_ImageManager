@@ -170,7 +170,8 @@ class CardSwipeViewModelTest {
 
         viewModel.requestTrash { capturedSender = it }
         viewModel.onConfirmationResult(confirmed = true)
-        assertEquals(1, viewModel.state.value.currentIndex)
+        assertEquals(0, viewModel.state.value.currentIndex)
+        assertEquals(2L, viewModel.state.value.currentPhoto?.mediaId)
         assertEquals(1L, viewModel.state.value.lastTrashed?.mediaId)
     }
 
@@ -183,7 +184,8 @@ class CardSwipeViewModelTest {
 
         viewModel.requestTrash { }
         viewModel.onConfirmationResult(confirmed = true)
-        assertEquals(1, viewModel.state.value.currentIndex)
+        assertEquals(0, viewModel.state.value.currentIndex)
+        assertEquals(1, viewModel.state.value.photos.size)
         assertEquals(1L, viewModel.state.value.lastTrashed?.mediaId)
 
         var capturedSender: IntentSender? = null
@@ -193,6 +195,7 @@ class CardSwipeViewModelTest {
 
         assertEquals(1, actions.untrashCallCount)
         assertEquals(null, viewModel.state.value.lastTrashed)
+        assertEquals(2, viewModel.state.value.photos.size)
         assertEquals(1L, viewModel.state.value.currentPhoto?.mediaId)
     }
 
@@ -210,6 +213,26 @@ class CardSwipeViewModelTest {
 
         assertEquals(null, viewModel.state.value.lastTrashed)
         assertEquals(0, actions.untrashCallCount)
+    }
+
+    @Test
+    fun requestTrash_removesPhotoFromListSoMovePreviousDoesNotRevealIt() {
+        val fakeSender = Mockito.mock(IntentSender::class.java)
+        val actions = FakePhotoActions(trashSender = fakeSender)
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1), photo(2), photo(3)))
+
+        viewModel.moveNext() // currentIndex = 1, photo(2) current
+        viewModel.requestTrash { }
+        viewModel.onConfirmationResult(confirmed = true)
+
+        // photo(2) removed; photo(3) has shifted into index 1
+        assertEquals(2, viewModel.state.value.photos.size)
+        assertEquals(3L, viewModel.state.value.currentPhoto?.mediaId)
+
+        viewModel.movePrevious()
+
+        // Scrolling back must land on photo(1), never on the trashed photo(2)
+        assertEquals(1L, viewModel.state.value.currentPhoto?.mediaId)
     }
 
     @Test

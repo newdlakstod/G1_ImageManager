@@ -14,15 +14,19 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -105,7 +109,18 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
 
             val photo = state.currentPhoto
             if (photo == null) {
-                Text("더 이상 사진이 없습니다", modifier = Modifier.align(Alignment.Center))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.align(Alignment.Center),
+                ) {
+                    Text("더 이상 사진이 없습니다")
+                    if (state.photos.isNotEmpty()) {
+                        Spacer(Modifier.height(12.dp))
+                        Button(onClick = { viewModel.movePrevious() }) {
+                            Text("이전으로")
+                        }
+                    }
+                }
             } else {
                 var dragOffset by remember(photo.mediaId) { mutableStateOf(Offset.Zero) }
                 AsyncImage(

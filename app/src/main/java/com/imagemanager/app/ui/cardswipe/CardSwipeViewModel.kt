@@ -92,7 +92,7 @@ class CardSwipeViewModel(
         val photo = _state.value.currentPhoto ?: return
         val sender = photoActions.requestTrash(listOf(photo.mediaId))
         pendingConfirmation = {
-            advance()
+            removeCurrentPhoto()
             _state.value = _state.value.copy(lastTrashed = photo)
             _trashConfirmedEvents.tryEmit(Unit)
         }
@@ -131,9 +131,9 @@ class CardSwipeViewModel(
         }
         val sender = photoActions.movePhotoToPile(photo.mediaId, pile)
         if (sender == null) {
-            advance()
+            removeCurrentPhoto()
         } else {
-            pendingConfirmation = { advance() }
+            pendingConfirmation = { removeCurrentPhoto() }
             onNeedsConfirmation(sender)
         }
     }
@@ -165,5 +165,14 @@ class CardSwipeViewModel(
 
     private fun advance() {
         _state.value = _state.value.copy(currentIndex = _state.value.currentIndex + 1)
+    }
+
+    private fun removeCurrentPhoto() {
+        val current = _state.value
+        val index = current.currentIndex
+        if (index !in current.photos.indices) return
+        val updated = current.photos.toMutableList()
+        updated.removeAt(index)
+        _state.value = current.copy(photos = updated)
     }
 }
