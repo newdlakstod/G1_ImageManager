@@ -90,6 +90,7 @@ class CardSwipeViewModelTest {
         }
 
         override fun listGalleryFolders(): List<com.imagemanager.app.data.GalleryFolder> = emptyList()
+        override fun countPhotosIn(relativePath: String): Int = 0
     }
 
     private class FakeLastPositionStore(initial: Long? = null) : LastPositionStore {

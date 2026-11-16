@@ -43,10 +43,11 @@ fun PileListScreen(viewModel: PileViewModel, onPileClick: (PileEntity) -> Unit) 
         }
         Spacer(Modifier.height(16.dp))
         LazyColumn {
-            items(piles, key = { it.pileId }) { pile ->
+            items(piles, key = { it.pile.pileId }) { pileWithCount ->
                 ListItem(
-                    headlineContent = { Text(pile.name) },
-                    modifier = Modifier.clickable { onPileClick(pile) },
+                    headlineContent = { Text(pileWithCount.pile.name) },
+                    trailingContent = { Text("${pileWithCount.photoCount}장") },
+                    modifier = Modifier.clickable { onPileClick(pileWithCount.pile) },
                 )
             }
         }

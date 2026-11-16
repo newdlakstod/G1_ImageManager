@@ -150,4 +150,6 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         }
         return folders.sortedBy { it.name }
     }
+
+    override fun countPhotosIn(relativePath: String): Int = listByRelativePath(relativePath).size
 }

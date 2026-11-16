@@ -42,6 +42,7 @@ class GalleryFolderSyncTest {
             throw UnsupportedOperationException("not exercised by this test")
         override fun movePhotoToPile(mediaId: Long, pile: PileEntity): IntentSender? = null
         override fun listGalleryFolders(): List<GalleryFolder> = folders
+        override fun countPhotosIn(relativePath: String): Int = 0
     }
 
     @Test

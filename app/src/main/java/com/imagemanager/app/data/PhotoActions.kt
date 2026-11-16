@@ -9,4 +9,5 @@ interface PhotoActions {
     fun requestUntrash(mediaIds: List<Long>): IntentSender
     fun movePhotoToPile(mediaId: Long, pile: PileEntity): IntentSender?
     fun listGalleryFolders(): List<GalleryFolder>
+    fun countPhotosIn(relativePath: String): Int
 }
