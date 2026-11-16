@@ -106,6 +106,11 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         return MediaStore.createTrashRequest(context.contentResolver, uris, true).intentSender
     }
 
+    override fun requestUntrash(mediaIds: List<Long>): IntentSender {
+        val uris = mediaIds.map { ContentUris.withAppendedId(collection, it) }
+        return MediaStore.createTrashRequest(context.contentResolver, uris, false).intentSender
+    }
+
     override fun movePhotoToPile(mediaId: Long, pile: PileEntity): IntentSender? {
         val uri = ContentUris.withAppendedId(collection, mediaId)
         val values = ContentValues().apply {

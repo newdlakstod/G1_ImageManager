@@ -9,11 +9,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,8 +35,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.imagemanager.app.ui.piles.PilePickerSheet
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+private const val UNDO_WINDOW_MS = 4000L
 
 private val SWIPE_THRESHOLD_DP = 96.dp
 
@@ -121,6 +128,34 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel) {
                 onCreate = { name -> viewModel.createAndSelectPile(name) },
                 onDismiss = { showPilePicker = false },
             )
+        }
+
+        if (state.lastTrashed != null) {
+            LaunchedEffect(state.lastTrashed) {
+                delay(UNDO_WINDOW_MS)
+                viewModel.dismissUndo()
+            }
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                tonalElevation = 4.dp,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("사진을 삭제했습니다", modifier = Modifier.weight(1f))
+                    TextButton(onClick = {
+                        viewModel.undoLastTrash {
+                            confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
+                        }
+                    }) {
+                        Text("실행 취소")
+                    }
+                }
+            }
         }
     }
 }
