@@ -25,8 +25,6 @@ class CardSwipeGestureTest {
         override fun toggleFavorite(mediaId: Long, favorite: Boolean) = null
         override fun requestTrash(mediaIds: List<Long>) =
             throw UnsupportedOperationException("not exercised by this test")
-        override fun requestUntrash(mediaIds: List<Long>) =
-            throw UnsupportedOperationException("not exercised by this test")
         override fun movePhotoToPile(mediaId: Long, pile: PileEntity) = null
         override fun listGalleryFolders() = emptyList<com.imagemanager.app.data.GalleryFolder>()
         override fun countPhotosIn(relativePath: String) = 0

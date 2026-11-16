@@ -35,7 +35,6 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -68,12 +67,10 @@ import com.imagemanager.app.ui.common.FavoriteBadge
 import com.imagemanager.app.ui.common.VideoBadge
 import com.imagemanager.app.ui.common.VideoPlayOverlay
 import com.imagemanager.app.ui.piles.PilePickerSheet
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private const val UNDO_WINDOW_MS = 4000L
 private const val PINCH_TO_GRID_SCALE_THRESHOLD = 0.6f
 private const val MIN_PHOTO_SCALE = 0.3f
 private const val MAX_PHOTO_SCALE = 4f
@@ -342,30 +339,6 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                 )
             }
 
-            if (state.lastTrashed != null) {
-                LaunchedEffect(state.lastTrashed) {
-                    delay(UNDO_WINDOW_MS)
-                    viewModel.dismissUndo()
-                }
-                Surface(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 16.dp),
-                    shape = RoundedCornerShape(50),
-                    color = Color(0xFF323232),
-                    contentColor = Color.White,
-                    shadowElevation = 8.dp,
-                ) {
-                    TextButton(
-                        onClick = {
-                            viewModel.undoLastTrash {
-                                confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
-                            }
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
-                    ) {
-                        Text("실행 취소")
-                    }
-                }
-            }
         }
     }
 }
