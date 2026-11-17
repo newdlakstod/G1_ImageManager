@@ -109,3 +109,8 @@
 
 ## Update (2026-11-17, v0.9.1)
 - **Done:** Compare buttons: 삭제 and 보류 white, 우선 black; the gray outline ring removed.
+
+## Update (2026-11-17, v0.10.0)
+- **Done:** Compare screen is full screen: bottom tabs hidden on `compare/*` routes, system bars hidden
+  (swipe from edge to peek, restored on leave), photos fill the screen; "n / total" and "이전으로" float
+  over the photos as translucent pills.

@@ -69,7 +69,8 @@ fun AppNavHost(app: ImageManagerApp) {
         bottomBar = {
             val backStackEntry by navController.currentBackStackEntryAsState()
             val currentRoute = backStackEntry?.destination?.route
-            NavigationBar {
+            // The comparison screen is full-screen: no bottom tabs there.
+            if (currentRoute?.startsWith("compare") != true) NavigationBar {
                 tabs.forEach { tab ->
                     NavigationBarItem(
                         selected = currentRoute == tab.route,

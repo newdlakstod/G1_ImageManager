@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -42,16 +44,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
 import com.imagemanager.app.data.Photo
 
@@ -101,6 +108,8 @@ fun ComparisonScreen(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result -> if (result.resultCode == Activity.RESULT_OK) onFinished() }
 
+    HideSystemBars()
+
     val challenger = session.challenger
     if (challenger == null) {
         SummaryPage(
@@ -116,19 +125,9 @@ fun ComparisonScreen(
         return
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
-        ) {
-            Text("${session.position} / ${session.total}", fontSize = 14.sp)
-            Spacer(Modifier.weight(1f))
-            TextButton(
-                enabled = session.canUndo,
-                onClick = { sync.reset(); viewModel.undo() },
-            ) { Text("이전으로") }
-        }
-        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+    // Full screen: the photos fill everything; progress and undo float on top of them.
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val landscape = maxWidth > maxHeight
             val actions: @Composable BoxScope.() -> Unit = {
                 ChallengerButtons(
@@ -150,6 +149,50 @@ fun ComparisonScreen(
                 }
             }
         }
+        FloatingPill(
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
+        ) {
+            Text("${session.position} / ${session.total}", fontSize = 13.sp, color = Color.White)
+        }
+        if (session.canUndo) {
+            FloatingPill(
+                onClick = { sync.reset(); viewModel.undo() },
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = 10.dp),
+            ) {
+                Text("이전으로", fontSize = 13.sp, color = Color.White)
+            }
+        }
+    }
+}
+
+/** Small translucent pill that floats over the photos. */
+@Composable
+private fun FloatingPill(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    val shape = RoundedCornerShape(50)
+    val clickable = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(Color.Black.copy(alpha = 0.55f))
+            .then(clickable)
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+    ) { content() }
+}
+
+/** Hides the status/navigation bars while this screen is shown (swipe from the edge to peek). */
+@Composable
+private fun HideSystemBars() {
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val window = (view.context as? Activity)?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller?.hide(WindowInsetsCompat.Type.systemBars())
+        onDispose { controller?.show(WindowInsetsCompat.Type.systemBars()) }
     }
 }
 
