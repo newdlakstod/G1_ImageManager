@@ -15,7 +15,7 @@ import com.imagemanager.app.data.db.PileEntity
 @RequiresApi(Build.VERSION_CODES.R)
 class MediaStoreRepository(private val context: Context) : PhotoActions {
 
-    // Used only for querying across both images and videos at once. createDeleteRequest/
+    // Used only for querying across both images and videos at once. createTrashRequest/
     // createWriteRequest reject URIs built from this generic collection ("All requested
     // items must be Media items"), so every per-item action below resolves the correct
     // type-specific collection (Images.Media / Video.Media) first.
@@ -111,7 +111,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
     }
 
     /**
-     * MediaStore.createDeleteRequest/createWriteRequest only accept URIs from the
+     * MediaStore.createTrashRequest/createWriteRequest only accept URIs from the
      * type-specific collections, not the generic Files collection used for querying
      * across both images and videos. This looks up a single row's MEDIA_TYPE and
      * returns the matching Images.Media/Video.Media URI for it.
@@ -143,12 +143,14 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         }
     }
 
-    // Permanent delete (not createTrashRequest's soft/recoverable trash) so that Google
-    // Photos' own backup sync recognizes the file as genuinely removed and mirrors the
-    // deletion into its own cloud trash, matching Samsung Gallery's delete behavior.
     override fun requestTrash(mediaIds: List<Long>): IntentSender {
         val uris = mediaIds.map { typeSpecificUri(it) }
-        return MediaStore.createDeleteRequest(context.contentResolver, uris).intentSender
+        return MediaStore.createTrashRequest(context.contentResolver, uris, true).intentSender
+    }
+
+    override fun requestUntrash(mediaIds: List<Long>): IntentSender {
+        val uris = mediaIds.map { typeSpecificUri(it) }
+        return MediaStore.createTrashRequest(context.contentResolver, uris, false).intentSender
     }
 
     override fun movePhotoToPile(mediaId: Long, pile: PileEntity): IntentSender? {

@@ -61,10 +61,12 @@ class CardSwipeViewModelTest {
 
     private class FakePhotoActions(
         private val trashSender: IntentSender? = null,
+        private val untrashSender: IntentSender? = null,
         private val favoriteSender: IntentSender? = null,
         private val moveSender: IntentSender? = null,
     ) : PhotoActions {
         var trashCallCount = 0
+        var untrashCallCount = 0
         var favoriteCallCount = 0
         var moveCallCount = 0
 
@@ -76,6 +78,11 @@ class CardSwipeViewModelTest {
         override fun requestTrash(mediaIds: List<Long>): IntentSender {
             trashCallCount++
             return trashSender ?: throw IllegalStateException("no sender configured")
+        }
+
+        override fun requestUntrash(mediaIds: List<Long>): IntentSender {
+            untrashCallCount++
+            return untrashSender ?: throw IllegalStateException("no sender configured")
         }
 
         override fun movePhotoToPile(mediaId: Long, pile: PileEntity): IntentSender? {
@@ -275,6 +282,47 @@ class CardSwipeViewModelTest {
         viewModel.onConfirmationResult(confirmed = true)
         assertEquals(0, viewModel.state.value.currentIndex)
         assertEquals(2L, viewModel.state.value.currentPhoto?.mediaId)
+        assertEquals(1L, viewModel.state.value.lastTrashed?.mediaId)
+    }
+
+    @Test
+    fun undoLastTrash_reinsertsPhotoAndClearsLastTrashed() {
+        val trashSender = Mockito.mock(IntentSender::class.java)
+        val untrashSender = Mockito.mock(IntentSender::class.java)
+        val actions = FakePhotoActions(trashSender = trashSender, untrashSender = untrashSender)
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1), photo(2)))
+
+        viewModel.requestTrash { }
+        viewModel.onConfirmationResult(confirmed = true)
+        assertEquals(0, viewModel.state.value.currentIndex)
+        assertEquals(1, viewModel.state.value.photos.size)
+        assertEquals(1L, viewModel.state.value.lastTrashed?.mediaId)
+
+        var capturedSender: IntentSender? = null
+        viewModel.undoLastTrash { capturedSender = it }
+        assertEquals(untrashSender, capturedSender)
+        viewModel.onConfirmationResult(confirmed = true)
+
+        assertEquals(1, actions.untrashCallCount)
+        assertEquals(null, viewModel.state.value.lastTrashed)
+        assertEquals(2, viewModel.state.value.photos.size)
+        assertEquals(1L, viewModel.state.value.currentPhoto?.mediaId)
+    }
+
+    @Test
+    fun dismissUndo_clearsLastTrashedWithoutCallingUntrash() {
+        val trashSender = Mockito.mock(IntentSender::class.java)
+        val actions = FakePhotoActions(trashSender = trashSender)
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1)))
+
+        viewModel.requestTrash { }
+        viewModel.onConfirmationResult(confirmed = true)
+        assertEquals(1L, viewModel.state.value.lastTrashed?.mediaId)
+
+        viewModel.dismissUndo()
+
+        assertEquals(null, viewModel.state.value.lastTrashed)
+        assertEquals(0, actions.untrashCallCount)
     }
 
     @Test

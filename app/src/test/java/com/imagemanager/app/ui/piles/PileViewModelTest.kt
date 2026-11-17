@@ -51,6 +51,8 @@ class PileViewModelTest {
         override fun toggleFavorite(mediaId: Long, favorite: Boolean): IntentSender? = null
         override fun requestTrash(mediaIds: List<Long>): IntentSender =
             throw UnsupportedOperationException("not exercised by this test")
+        override fun requestUntrash(mediaIds: List<Long>): IntentSender =
+            throw UnsupportedOperationException("not exercised by this test")
         override fun movePhotoToPile(mediaId: Long, pile: PileEntity): IntentSender? = null
         override fun listGalleryFolders(): List<GalleryFolder> = emptyList()
         override fun countPhotosIn(relativePath: String): Int = counts[relativePath] ?: 0

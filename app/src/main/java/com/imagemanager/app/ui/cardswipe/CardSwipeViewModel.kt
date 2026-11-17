@@ -22,6 +22,7 @@ data class CardSwipeUiState(
     val photos: List<Photo> = emptyList(),
     val currentIndex: Int = 0,
     val currentPileId: Long? = null,
+    val lastTrashed: Photo? = null,
 ) {
     val currentPhoto: Photo? get() = photos.getOrNull(currentIndex)
     val isExhausted: Boolean get() = currentIndex >= photos.size
@@ -119,9 +120,30 @@ class CardSwipeViewModel(
         val sender = photoActions.requestTrash(listOf(photo.mediaId))
         pendingConfirmation = {
             removeCurrentPhoto()
+            _state.value = _state.value.copy(lastTrashed = photo)
             _trashConfirmedEvents.tryEmit(Unit)
         }
         onNeedsConfirmation(sender)
+    }
+
+    fun undoLastTrash(onNeedsConfirmation: (IntentSender) -> Unit) {
+        val photo = _state.value.lastTrashed ?: return
+        val sender = photoActions.requestUntrash(listOf(photo.mediaId))
+        pendingConfirmation = { restoreTrashedPhoto(photo) }
+        onNeedsConfirmation(sender)
+    }
+
+    fun dismissUndo() {
+        if (_state.value.lastTrashed != null) {
+            _state.value = _state.value.copy(lastTrashed = null)
+        }
+    }
+
+    private fun restoreTrashedPhoto(photo: Photo) {
+        val current = _state.value
+        val updated = current.photos.toMutableList()
+        updated.add(current.currentIndex.coerceIn(0, updated.size), photo)
+        setState(current.copy(photos = updated, lastTrashed = null))
     }
 
     fun requestMoveToCurrentPile(

@@ -38,6 +38,8 @@ class GalleryFolderSyncTest {
         override fun toggleFavorite(mediaId: Long, favorite: Boolean): IntentSender? = null
         override fun requestTrash(mediaIds: List<Long>): IntentSender =
             throw UnsupportedOperationException("not exercised by this test")
+        override fun requestUntrash(mediaIds: List<Long>): IntentSender =
+            throw UnsupportedOperationException("not exercised by this test")
         override fun movePhotoToPile(mediaId: Long, pile: PileEntity): IntentSender? = null
         override fun listGalleryFolders(): List<GalleryFolder> = folders
         override fun countPhotosIn(relativePath: String): Int = 0
