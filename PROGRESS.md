@@ -85,3 +85,9 @@
 ## Update (2026-11-17, v0.6.0)
 - **Done:** Grid pinch levels (3 -> 5 -> 7 columns; pinch in = smaller thumbs, spread = larger; one
   step per gesture). Grid long-press now starts multi-select instead of toggling favorite.
+
+## Update (2026-11-17, v0.7.0)
+- **Done:** Removed "여러 장 선택" chip in grid (long-press selects; selection mode = any selected).
+  Rewrote ComparisonScreen: 2-col large cards, tap = keep (green), others dimmed "삭제 예정",
+  bottom button "N장 남기고 M장 삭제" trashes the rest via system confirm then pops back;
+  long-press = fullscreen preview with pinch zoom.

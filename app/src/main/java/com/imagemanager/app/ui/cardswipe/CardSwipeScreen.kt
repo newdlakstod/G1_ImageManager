@@ -156,8 +156,9 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
         if (showGrid) {
             val gridState = rememberLazyGridState()
             val coroutineScope = rememberCoroutineScope()
-            var selectionMode by remember { mutableStateOf(false) }
             var selectedIds by remember { mutableStateOf(setOf<Long>()) }
+            // Selecting starts with a long-press; once anything is selected, taps toggle photos.
+            val selectionMode = selectedIds.isNotEmpty()
             var columnLevel by remember { mutableIntStateOf(0) }
 
             LazyVerticalGrid(
@@ -215,9 +216,7 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                                         showGrid = false
                                     }
                                 },
-                                // Long-press starts multi-select (and picks this photo).
                                 onLongClick = {
-                                    selectionMode = true
                                     selectedIds = if (isSelected) {
                                         selectedIds - gridPhoto.mediaId
                                     } else {
@@ -245,14 +244,6 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                 itemCount = state.photos.size,
                 onJumpTo = { index -> coroutineScope.launch { gridState.scrollToItem(index) } },
                 modifier = Modifier.align(Alignment.CenterEnd),
-            )
-            AssistChip(
-                onClick = {
-                    selectionMode = !selectionMode
-                    if (!selectionMode) selectedIds = emptySet()
-                },
-                label = { Text(if (selectionMode) "선택 모드 끄기" else "여러 장 선택") },
-                modifier = Modifier.align(Alignment.TopCenter).padding(16.dp),
             )
             if (selectedIds.isNotEmpty()) {
                 Surface(

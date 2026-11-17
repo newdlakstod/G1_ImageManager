@@ -200,7 +200,11 @@ fun AppNavHost(app: ImageManagerApp) {
                 val ids = backStackEntry.arguments?.getString("mediaIds")
                     ?.split(",")?.mapNotNull { it.toLongOrNull() }
                     ?: emptyList()
-                ComparisonScreen(photos = app.mediaStoreRepository.listByIds(ids))
+                ComparisonScreen(
+                    photos = app.mediaStoreRepository.listByIds(ids),
+                    requestTrash = { app.mediaStoreRepository.requestTrash(it) },
+                    onFinished = { navController.popBackStack() },
+                )
             }
         }
     }
