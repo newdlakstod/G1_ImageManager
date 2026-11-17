@@ -21,6 +21,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -298,6 +299,10 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                         }
                         .pointerInput(photo.mediaId) {
                             detectTapGestures(
+                                // Tap the left half for the previous photo, the right half for the next.
+                                onTap = { tap ->
+                                    if (tap.x < size.width / 2f) viewModel.movePrevious() else viewModel.moveNext()
+                                },
                                 onLongPress = {
                                     viewModel.toggleFavorite {
                                         confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
@@ -394,18 +399,18 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                 Surface(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp),
                     shape = RoundedCornerShape(50),
-                    color = Color(0xFF323232),
+                    color = Color(0xFF323232).copy(alpha = 0.6f),
                     contentColor = Color.White,
-                    shadowElevation = 8.dp,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             t.text,
+                            fontSize = 12.sp,
                             modifier = Modifier.padding(
-                                start = 16.dp,
-                                end = if (t.undoable) 0.dp else 16.dp,
-                                top = 12.dp,
-                                bottom = 12.dp,
+                                start = 12.dp,
+                                end = if (t.undoable) 0.dp else 12.dp,
+                                top = 6.dp,
+                                bottom = 6.dp,
                             ),
                         )
                         if (t.undoable && state.lastMoved != null) {
@@ -417,8 +422,9 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                                     }
                                 },
                                 colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                             ) {
-                                Text("실행 취소")
+                                Text("실행 취소", fontSize = 12.sp)
                             }
                         }
                     }

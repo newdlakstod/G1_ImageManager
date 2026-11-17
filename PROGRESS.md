@@ -69,3 +69,7 @@
   `Photo.relativePath`). Trash has NO undo (earlier undo-trash bugs); recover from device trash.
   `PhotoActions.requestUntrash` is now unused (left in interface to limit churn).
 - **Next:** Verify animations/undo on the real Galaxy; rebuild + update the GitHub release APK.
+
+## Update (2026-11-17, v0.3.0)
+- **Done:** Tap left/right half of the photo = previous/next. Snackbar made smaller (12sp, tighter
+  padding) and 60% opaque, no shadow.
