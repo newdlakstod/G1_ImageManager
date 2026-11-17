@@ -20,7 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -30,6 +33,7 @@ import androidx.navigation.navArgument
 import com.imagemanager.app.ImageManagerApp
 import com.imagemanager.app.ui.cardswipe.CardSwipeScreen
 import com.imagemanager.app.ui.cardswipe.CardSwipeViewModel
+import com.imagemanager.app.ui.compare.CompareViewModel
 import com.imagemanager.app.ui.compare.ComparisonScreen
 import com.imagemanager.app.ui.favorites.FavoritesScreen
 import com.imagemanager.app.ui.favorites.FavoritesViewModel
@@ -200,11 +204,23 @@ fun AppNavHost(app: ImageManagerApp) {
                 val ids = backStackEntry.arguments?.getString("mediaIds")
                     ?.split(",")?.mapNotNull { it.toLongOrNull() }
                     ?: emptyList()
-                ComparisonScreen(
-                    photos = app.mediaStoreRepository.listByIds(ids),
-                    requestTrash = { app.mediaStoreRepository.requestTrash(it) },
-                    onFinished = { navController.popBackStack() },
-                )
+                // listByIds is an SQL IN query, so restore the order the photos were selected in
+                // (the first one becomes the main photo).
+                val byId = app.mediaStoreRepository.listByIds(ids).associateBy { it.mediaId }
+                val photos = ids.mapNotNull { byId[it] }
+                if (photos.size < 2) {
+                    Text("비교할 사진이 부족해요", modifier = Modifier.padding(16.dp))
+                } else {
+                    val viewModel: CompareViewModel = viewModel(
+                        key = "compare-${ids.joinToString(",")}",
+                        factory = viewModelFactory { initializer { CompareViewModel(photos) } },
+                    )
+                    ComparisonScreen(
+                        viewModel = viewModel,
+                        requestTrash = { app.mediaStoreRepository.requestTrash(it) },
+                        onFinished = { navController.popBackStack() },
+                    )
+                }
             }
         }
     }

@@ -91,3 +91,13 @@
   Rewrote ComparisonScreen: 2-col large cards, tap = keep (green), others dimmed "삭제 예정",
   bottom button "N장 남기고 M장 삭제" trashes the rest via system confirm then pops back;
   long-press = fullscreen preview with pinch zoom.
+
+## Update (2026-11-17, v0.8.0)
+- **Done:** Comparison redesigned as a tournament (spec `docs/superpowers/specs/2026-11-17-compare-tournament-design.md`,
+  plan `docs/superpowers/plans/2026-11-17-compare-tournament.md`). Main photo (left in landscape / top in
+  portrait) vs one challenger; challenger -> 삭제 / 보류 / 우선(promote; old main goes to held).
+  Synced pinch-zoom/pan across both panes. Summary page trashes all deleted photos in ONE confirmation.
+  Pure rules in `CompareSession` (unit-tested), progress kept in `CompareViewModel`.
+- **Decisions:** first selected photo = first main; nothing is trashed until the summary page; held
+  photos and the final main are simply kept.
+- **Next:** verify on the real Galaxy (landscape/portrait layout, synced zoom feel, one-shot trash).
