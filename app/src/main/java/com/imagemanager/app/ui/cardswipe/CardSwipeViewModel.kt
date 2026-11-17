@@ -18,11 +18,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/** A photo that was just moved into a pile; [originalPath] is where it came from, used by undo. */
+data class PhotoMoved(val photo: Photo, val pileName: String, val originalPath: String?)
+
 data class CardSwipeUiState(
     val photos: List<Photo> = emptyList(),
     val currentIndex: Int = 0,
     val currentPileId: Long? = null,
-    val lastTrashed: Photo? = null,
+    val lastMoved: PhotoMoved? = null,
 ) {
     val currentPhoto: Photo? get() = photos.getOrNull(currentIndex)
     val isExhausted: Boolean get() = currentIndex >= photos.size
@@ -42,14 +45,14 @@ class CardSwipeViewModel(
     val piles: StateFlow<List<PileEntity>> = pileDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _trashConfirmedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val trashConfirmedEvents: SharedFlow<Unit> = _trashConfirmedEvents
+    private val _trashConfirmedEvents = MutableSharedFlow<Photo>(extraBufferCapacity = 1)
+    val trashConfirmedEvents: SharedFlow<Photo> = _trashConfirmedEvents
 
     private val _favoriteToggledEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
     val favoriteToggledEvents: SharedFlow<Boolean> = _favoriteToggledEvents
 
-    private val _pileMovedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val pileMovedEvents: SharedFlow<Unit> = _pileMovedEvents
+    private val _pileMovedEvents = MutableSharedFlow<PhotoMoved>(extraBufferCapacity = 1)
+    val pileMovedEvents: SharedFlow<PhotoMoved> = _pileMovedEvents
 
     private var pendingConfirmation: (() -> Unit)? = null
 
@@ -115,35 +118,42 @@ class CardSwipeViewModel(
         setState(current.copy(photos = latest, currentIndex = newIndex))
     }
 
+    // No undo for trash: the photo stays recoverable from the device trash instead.
     fun requestTrash(onNeedsConfirmation: (IntentSender) -> Unit) {
         val photo = _state.value.currentPhoto ?: return
         val sender = photoActions.requestTrash(listOf(photo.mediaId))
         pendingConfirmation = {
             removeCurrentPhoto()
-            _state.value = _state.value.copy(lastTrashed = photo)
-            _trashConfirmedEvents.tryEmit(Unit)
+            _trashConfirmedEvents.tryEmit(photo)
         }
         onNeedsConfirmation(sender)
     }
 
-    fun undoLastTrash(onNeedsConfirmation: (IntentSender) -> Unit) {
-        val photo = _state.value.lastTrashed ?: return
-        val sender = photoActions.requestUntrash(listOf(photo.mediaId))
-        pendingConfirmation = { restoreTrashedPhoto(photo) }
-        onNeedsConfirmation(sender)
+    fun undoLastMove(onNeedsConfirmation: (IntentSender) -> Unit) {
+        val moved = _state.value.lastMoved ?: return
+        val originalPath = moved.originalPath ?: return
+        // Moving back is just another move, to a throwaway "pile" pointing at the original folder.
+        val origin = PileEntity(name = "", folderRelativePath = originalPath, createdAt = 0L)
+        val sender = photoActions.movePhotoToPile(moved.photo.mediaId, origin)
+        if (sender == null) {
+            restoreMovedPhoto(moved.photo)
+        } else {
+            pendingConfirmation = { restoreMovedPhoto(moved.photo) }
+            onNeedsConfirmation(sender)
+        }
     }
 
     fun dismissUndo() {
-        if (_state.value.lastTrashed != null) {
-            _state.value = _state.value.copy(lastTrashed = null)
+        if (_state.value.lastMoved != null) {
+            _state.value = _state.value.copy(lastMoved = null)
         }
     }
 
-    private fun restoreTrashedPhoto(photo: Photo) {
+    private fun restoreMovedPhoto(photo: Photo) {
         val current = _state.value
         val updated = current.photos.toMutableList()
         updated.add(current.currentIndex.coerceIn(0, updated.size), photo)
-        setState(current.copy(photos = updated, lastTrashed = null))
+        setState(current.copy(photos = updated, lastMoved = null))
     }
 
     fun requestMoveToCurrentPile(
@@ -157,16 +167,19 @@ class CardSwipeViewModel(
             return
         }
         val sender = photoActions.movePhotoToPile(photo.mediaId, pile)
+        val moved = PhotoMoved(photo, pile.name, photo.relativePath)
         if (sender == null) {
-            removeCurrentPhoto()
-            _pileMovedEvents.tryEmit(Unit)
+            onMoved(moved)
         } else {
-            pendingConfirmation = {
-                removeCurrentPhoto()
-                _pileMovedEvents.tryEmit(Unit)
-            }
+            pendingConfirmation = { onMoved(moved) }
             onNeedsConfirmation(sender)
         }
+    }
+
+    private fun onMoved(moved: PhotoMoved) {
+        removeCurrentPhoto()
+        _state.value = _state.value.copy(lastMoved = moved)
+        _pileMovedEvents.tryEmit(moved)
     }
 
     fun toggleFavorite(onNeedsConfirmation: (IntentSender) -> Unit) {

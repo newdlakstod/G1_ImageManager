@@ -61,3 +61,11 @@
   Photos trash; Samsung Gallery does it via its own integration.
 - **Next:** On the real Galaxy, verify trashed photo shows in Samsung Gallery "최근 삭제". Cloud
   copy in Google Photos may remain; delete there manually if needed.
+
+## Update (2026-11-17, animations)
+- **Done:** Fly-away animation on swipe (up = trash flies off, down = folder move shrinks away),
+  bottom toast ("휴지통으로 이동" / "<폴더>(으)로 이동"), heart pop on favorite.
+- **Decision:** Undo only for folder moves (moves the file back to its original RELATIVE_PATH,
+  `Photo.relativePath`). Trash has NO undo (earlier undo-trash bugs); recover from device trash.
+  `PhotoActions.requestUntrash` is now unused (left in interface to limit churn).
+- **Next:** Verify animations/undo on the real Galaxy; rebuild + update the GitHub release APK.

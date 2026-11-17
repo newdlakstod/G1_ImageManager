@@ -282,47 +282,49 @@ class CardSwipeViewModelTest {
         viewModel.onConfirmationResult(confirmed = true)
         assertEquals(0, viewModel.state.value.currentIndex)
         assertEquals(2L, viewModel.state.value.currentPhoto?.mediaId)
-        assertEquals(1L, viewModel.state.value.lastTrashed?.mediaId)
     }
 
     @Test
-    fun undoLastTrash_reinsertsPhotoAndClearsLastTrashed() {
-        val trashSender = Mockito.mock(IntentSender::class.java)
-        val untrashSender = Mockito.mock(IntentSender::class.java)
-        val actions = FakePhotoActions(trashSender = trashSender, untrashSender = untrashSender)
-        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1), photo(2)))
+    fun undoLastMove_movesPhotoBackAndReinsertsIt() = runTest(testDispatcher) {
+        val actions = FakePhotoActions(moveSender = null)
+        val pileId = db.pileDao().insert(
+            PileEntity(name = "Trip", folderRelativePath = "Pictures/Piles/Trip", createdAt = 0L),
+        )
+        val original = photo(1).copy(relativePath = "DCIM/Camera/")
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(original, photo(2)))
+        viewModel.piles.launchIn(backgroundScope)
+        advanceUntilIdle()
+        viewModel.selectPile(pileId)
 
-        viewModel.requestTrash { }
-        viewModel.onConfirmationResult(confirmed = true)
-        assertEquals(0, viewModel.state.value.currentIndex)
+        viewModel.requestMoveToCurrentPile(onNeedsConfirmation = { }, onNoPileSelected = { })
         assertEquals(1, viewModel.state.value.photos.size)
-        assertEquals(1L, viewModel.state.value.lastTrashed?.mediaId)
+        assertEquals("Trip", viewModel.state.value.lastMoved?.pileName)
+        assertEquals("DCIM/Camera/", viewModel.state.value.lastMoved?.originalPath)
 
-        var capturedSender: IntentSender? = null
-        viewModel.undoLastTrash { capturedSender = it }
-        assertEquals(untrashSender, capturedSender)
-        viewModel.onConfirmationResult(confirmed = true)
+        viewModel.undoLastMove { }
 
-        assertEquals(1, actions.untrashCallCount)
-        assertEquals(null, viewModel.state.value.lastTrashed)
+        assertEquals(2, actions.moveCallCount)
+        assertEquals(null, viewModel.state.value.lastMoved)
         assertEquals(2, viewModel.state.value.photos.size)
         assertEquals(1L, viewModel.state.value.currentPhoto?.mediaId)
     }
 
     @Test
-    fun dismissUndo_clearsLastTrashedWithoutCallingUntrash() {
-        val trashSender = Mockito.mock(IntentSender::class.java)
-        val actions = FakePhotoActions(trashSender = trashSender)
-        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1)))
-
-        viewModel.requestTrash { }
-        viewModel.onConfirmationResult(confirmed = true)
-        assertEquals(1L, viewModel.state.value.lastTrashed?.mediaId)
+    fun dismissUndo_clearsLastMovedWithoutMovingBack() = runTest(testDispatcher) {
+        val actions = FakePhotoActions(moveSender = null)
+        val pileId = db.pileDao().insert(
+            PileEntity(name = "Trip", folderRelativePath = "Pictures/Piles/Trip", createdAt = 0L),
+        )
+        val viewModel = CardSwipeViewModel(actions, db.pileDao(), listOf(photo(1).copy(relativePath = "DCIM/Camera/")))
+        viewModel.piles.launchIn(backgroundScope)
+        advanceUntilIdle()
+        viewModel.selectPile(pileId)
+        viewModel.requestMoveToCurrentPile(onNeedsConfirmation = { }, onNoPileSelected = { })
 
         viewModel.dismissUndo()
 
-        assertEquals(null, viewModel.state.value.lastTrashed)
-        assertEquals(0, actions.untrashCallCount)
+        assertEquals(null, viewModel.state.value.lastMoved)
+        assertEquals(1, actions.moveCallCount)
     }
 
     @Test
@@ -371,7 +373,7 @@ class CardSwipeViewModelTest {
         advanceUntilIdle()
         viewModel.selectPile(pileId)
 
-        val emitted = mutableListOf<Unit>()
+        val emitted = mutableListOf<PhotoMoved>()
         val job = launch {
             viewModel.pileMovedEvents.collect { emitted.add(it) }
         }
@@ -397,7 +399,7 @@ class CardSwipeViewModelTest {
         advanceUntilIdle()
         viewModel.selectPile(pileId)
 
-        val emitted = mutableListOf<Unit>()
+        val emitted = mutableListOf<PhotoMoved>()
         val job = launch {
             viewModel.pileMovedEvents.collect { emitted.add(it) }
         }

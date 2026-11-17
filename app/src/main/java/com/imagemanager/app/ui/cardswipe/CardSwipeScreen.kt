@@ -2,7 +2,10 @@ package com.imagemanager.app.ui.cardswipe
 
 import android.app.Activity
 import android.os.VibrationEffect
+import android.net.Uri
 import android.os.Vibrator
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,6 +50,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -65,6 +70,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.AsyncImage
@@ -83,6 +89,12 @@ private const val MIN_PHOTO_SCALE = 0.3f
 private const val MAX_PHOTO_SCALE = 4f
 
 private val SWIPE_THRESHOLD_DP = 96.dp
+private const val FLY_AWAY_MS = 320
+private const val TRASH_TOAST_MS = 2000L
+
+private enum class FlyDirection { UP, DOWN }
+private data class FlyingPhoto(val uri: Uri, val direction: FlyDirection, val key: Long)
+private data class ActionToast(val text: String, val undoable: Boolean, val key: Long)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -91,6 +103,9 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
     val piles by viewModel.piles.collectAsState()
     var showPilePicker by remember { mutableStateOf(false) }
     var showGrid by remember { mutableStateOf(false) }
+    var flying by remember { mutableStateOf<FlyingPhoto?>(null) }
+    var toast by remember { mutableStateOf<ActionToast?>(null) }
+    var heartPop by remember { mutableIntStateOf(0) }
     val swipeThresholdPx = with(LocalDensity.current) { SWIPE_THRESHOLD_DP.toPx() }
 
     val confirmationLauncher = rememberLauncherForActivityResult(
@@ -99,21 +114,28 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
 
     val context = LocalContext.current
     LaunchedEffect(viewModel) {
-        viewModel.trashConfirmedEvents.collect {
+        viewModel.trashConfirmedEvents.collect { photo ->
             val vibrator = context.getSystemService(Vibrator::class.java)
             vibrator?.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE))
+            val key = System.nanoTime()
+            flying = FlyingPhoto(photo.uri, FlyDirection.UP, key)
+            toast = ActionToast("휴지통으로 이동", undoable = false, key = key)
         }
     }
     LaunchedEffect(viewModel) {
-        viewModel.favoriteToggledEvents.collect {
+        viewModel.favoriteToggledEvents.collect { favorite ->
             val vibrator = context.getSystemService(Vibrator::class.java)
             vibrator?.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE))
+            if (favorite) heartPop++
         }
     }
     LaunchedEffect(viewModel) {
-        viewModel.pileMovedEvents.collect {
+        viewModel.pileMovedEvents.collect { moved ->
             val vibrator = context.getSystemService(Vibrator::class.java)
             vibrator?.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE))
+            val key = System.nanoTime()
+            flying = FlyingPhoto(moved.photo.uri, FlyDirection.DOWN, key)
+            toast = ActionToast("${moved.pileName}(으)로 이동", undoable = moved.originalPath != null, key = key)
         }
     }
 
@@ -355,32 +377,107 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                 )
             }
 
-            if (state.lastTrashed != null) {
-                LaunchedEffect(state.lastTrashed) {
-                    delay(UNDO_WINDOW_MS)
+            flying?.let { f ->
+                FlyAwayPhoto(f, onDone = { if (flying?.key == f.key) flying = null })
+            }
+
+            if (heartPop > 0) {
+                HeartPop(key = heartPop, modifier = Modifier.align(Alignment.Center))
+            }
+
+            toast?.let { t ->
+                LaunchedEffect(t.key) {
+                    delay(if (t.undoable) UNDO_WINDOW_MS else TRASH_TOAST_MS)
+                    toast = null
                     viewModel.dismissUndo()
                 }
                 Surface(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 16.dp),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp),
                     shape = RoundedCornerShape(50),
                     color = Color(0xFF323232),
                     contentColor = Color.White,
                     shadowElevation = 8.dp,
                 ) {
-                    TextButton(
-                        onClick = {
-                            viewModel.undoLastTrash {
-                                confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            t.text,
+                            modifier = Modifier.padding(
+                                start = 16.dp,
+                                end = if (t.undoable) 0.dp else 16.dp,
+                                top = 12.dp,
+                                bottom = 12.dp,
+                            ),
+                        )
+                        if (t.undoable && state.lastMoved != null) {
+                            TextButton(
+                                onClick = {
+                                    toast = null
+                                    viewModel.undoLastMove {
+                                        confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
+                                    }
+                                },
+                                colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
+                            ) {
+                                Text("실행 취소")
                             }
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
-                    ) {
-                        Text("실행 취소")
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/** Plays a one-shot fly-away of the photo that was just trashed/moved, over the next card. */
+@Composable
+private fun FlyAwayPhoto(flying: FlyingPhoto, onDone: () -> Unit) {
+    val progress = remember(flying.key) { Animatable(0f) }
+    LaunchedEffect(flying.key) {
+        progress.animateTo(1f, tween(FLY_AWAY_MS))
+        onDone()
+    }
+    AsyncImage(
+        model = flying.uri,
+        contentDescription = null,
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                val p = progress.value
+                when (flying.direction) {
+                    // Trash: flies up and off the screen.
+                    FlyDirection.UP -> {
+                        translationY = -size.height * 0.8f * p
+                        scaleX = 1f - 0.2f * p
+                        scaleY = 1f - 0.2f * p
+                    }
+                    // Move to folder: shrinks and sinks away.
+                    FlyDirection.DOWN -> {
+                        translationY = size.height * 0.3f * p
+                        scaleX = 1f - 0.7f * p
+                        scaleY = 1f - 0.7f * p
+                    }
+                }
+                alpha = 1f - p
+            },
+    )
+}
+
+/** Big heart that pops and fades, replayed each time [key] changes. */
+@Composable
+private fun HeartPop(key: Int, modifier: Modifier = Modifier) {
+    val progress = remember(key) { Animatable(0f) }
+    LaunchedEffect(key) { progress.animateTo(1f, tween(600)) }
+    Text(
+        "♥",
+        color = Color(0xFFFF4D6D),
+        fontSize = 120.sp,
+        modifier = modifier.graphicsLayer {
+            val p = progress.value
+            scaleX = 0.5f + 0.7f * p
+            scaleY = 0.5f + 0.7f * p
+            alpha = 1f - p
+        },
+    )
 }
 
 @Composable

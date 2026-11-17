@@ -9,4 +9,5 @@ data class Photo(
     val dateModified: Long,
     val isFavorite: Boolean,
     val isVideo: Boolean = false,
+    val relativePath: String? = null,
 )

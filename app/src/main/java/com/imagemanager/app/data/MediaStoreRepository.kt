@@ -32,6 +32,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         MediaStore.Files.FileColumns.DATE_MODIFIED,
         MediaStore.Files.FileColumns.IS_FAVORITE,
         MediaStore.Files.FileColumns.MEDIA_TYPE,
+        MediaStore.Files.FileColumns.RELATIVE_PATH,
     )
 
     fun listPhotos(offset: Int, limit: Int): List<Photo> =
@@ -94,6 +95,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
             val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
             val favCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.IS_FAVORITE)
             val typeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+            val pathCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.RELATIVE_PATH)
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
                 val isVideo = cursor.getInt(typeCol) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
@@ -104,6 +106,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
                     dateModified = cursor.getLong(dateCol),
                     isFavorite = cursor.getInt(favCol) != 0,
                     isVideo = isVideo,
+                    relativePath = cursor.getString(pathCol),
                 )
             }
         }
