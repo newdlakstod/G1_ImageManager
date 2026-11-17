@@ -5,7 +5,6 @@ import android.content.IntentSender
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -58,7 +57,7 @@ import com.imagemanager.app.data.Photo
 
 private val DELETE_COLOR = Color(0xFFD64545)
 private val DELETE_BUTTON_COLOR = Color.White
-private val HOLD_BUTTON_COLOR = Color(0xFF8A8A8A)
+private val HOLD_BUTTON_COLOR = Color.White
 private val PROMOTE_BUTTON_COLOR = Color.Black
 private const val MAX_ZOOM = 6f
 
@@ -206,12 +205,12 @@ private fun ChallengerButtons(
         modifier = modifier.fillMaxWidth().padding(10.dp),
     ) {
         CircleActionButton(Icons.Filled.Delete, "삭제", DELETE_BUTTON_COLOR, Color(0xFF222222), onDelete)
-        CircleActionButton(Icons.Filled.Pause, "보류", HOLD_BUTTON_COLOR, Color.White, onHold)
+        CircleActionButton(Icons.Filled.Pause, "보류", HOLD_BUTTON_COLOR, Color(0xFF222222), onHold)
         CircleActionButton(Icons.Filled.EmojiEvents, "우선", PROMOTE_BUTTON_COLOR, Color.White, onPromote)
     }
 }
 
-/** Round icon button; the thin light ring keeps the black one visible on dark photos. */
+/** Round icon button without an outline. */
 @Composable
 private fun CircleActionButton(
     icon: ImageVector,
@@ -224,7 +223,6 @@ private fun CircleActionButton(
         onClick = onClick,
         shape = CircleShape,
         color = background,
-        border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.7f)),
         shadowElevation = 4.dp,
         modifier = Modifier.size(52.dp),
     ) {

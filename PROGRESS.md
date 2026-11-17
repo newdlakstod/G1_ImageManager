@@ -106,3 +106,6 @@
 - **Done:** Compare buttons are now round icon buttons (삭제 = white, 보류 = gray, 우선 = black,
   thin light ring so black stays visible on dark photos). Grid multi-select highlight: blue outer ring
   + white inner ring + blue tint + check badge (visible on black photos).
+
+## Update (2026-11-17, v0.9.1)
+- **Done:** Compare buttons: 삭제 and 보류 white, 우선 black; the gray outline ring removed.
