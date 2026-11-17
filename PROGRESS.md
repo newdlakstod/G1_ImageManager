@@ -52,3 +52,12 @@
 ## Open / Blockers
 - None currently blocking. Emulator boot was in progress as of last session end — check
   `adb devices` first thing next session.
+
+## Update (2026-11-17)
+- **Done:** Reverted b3127d7 (permanent delete) -> swipe-up trash uses `createTrashRequest` again
+  (recoverable device trash + 4s in-app undo restored). Reason: permanent delete did NOT land in
+  Google Photos trash; photos were simply lost. Unit tests + assembleDebug pass.
+- **Decision:** Don't retry permanent delete. Third-party apps have no API to put items in Google
+  Photos trash; Samsung Gallery does it via its own integration.
+- **Next:** On the real Galaxy, verify trashed photo shows in Samsung Gallery "최근 삭제". Cloud
+  copy in Google Photos may remain; delete there manually if needed.
