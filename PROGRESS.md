@@ -77,3 +77,7 @@
 ## Update (2026-11-17, v0.4.0)
 - **Done:** New "월별" tab: months with photo counts (newest first) -> tap to swipe-sort that month.
   `Photo.dateTaken` (MediaColumns.DATE_TAKEN) with fallback to DATE_MODIFIED; `Photo.monthKey`.
+
+## Update (2026-11-17, v0.5.0)
+- **Done:** Launcher icon replaced with user-supplied art (`앱아이콘/icon.png`, black glyph on white).
+  Adaptive icon: foreground = 512px PNG downscaled from the source, background = solid white.
