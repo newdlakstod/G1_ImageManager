@@ -81,3 +81,7 @@
 ## Update (2026-11-17, v0.5.0)
 - **Done:** Launcher icon replaced with user-supplied art (`앱아이콘/icon.png`, black glyph on white).
   Adaptive icon: foreground = 512px PNG downscaled from the source, background = solid white.
+
+## Update (2026-11-17, v0.6.0)
+- **Done:** Grid pinch levels (3 -> 5 -> 7 columns; pinch in = smaller thumbs, spread = larger; one
+  step per gesture). Grid long-press now starts multi-select instead of toggling favorite.

@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
@@ -90,6 +91,8 @@ private const val MIN_PHOTO_SCALE = 0.3f
 private const val MAX_PHOTO_SCALE = 4f
 
 private val SWIPE_THRESHOLD_DP = 96.dp
+private val GRID_COLUMN_LEVELS = listOf(3, 5, 7)
+private const val GRID_PINCH_STEP_THRESHOLD = 0.75f
 private const val FLY_AWAY_MS = 320
 private const val TRASH_TOAST_MS = 2000L
 
@@ -155,11 +158,36 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
             val coroutineScope = rememberCoroutineScope()
             var selectionMode by remember { mutableStateOf(false) }
             var selectedIds by remember { mutableStateOf(setOf<Long>()) }
+            var columnLevel by remember { mutableIntStateOf(0) }
 
             LazyVerticalGrid(
                 state = gridState,
-                columns = GridCells.Fixed(3),
-                modifier = Modifier.fillMaxSize(),
+                columns = GridCells.Fixed(GRID_COLUMN_LEVELS[columnLevel]),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        // Watches (never consumes) two-finger pinches: pinching in shrinks the
+                        // thumbnails one level (more columns), spreading enlarges them again.
+                        // One level per gesture, so scrolling and taps are unaffected.
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                            var zoom = 1f
+                            var stepped = false
+                            do {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (event.changes.size >= 2 && !stepped) {
+                                    zoom *= event.calculateZoom()
+                                    if (zoom < GRID_PINCH_STEP_THRESHOLD) {
+                                        columnLevel = (columnLevel + 1).coerceAtMost(GRID_COLUMN_LEVELS.lastIndex)
+                                        stepped = true
+                                    } else if (zoom > 1f / GRID_PINCH_STEP_THRESHOLD) {
+                                        columnLevel = (columnLevel - 1).coerceAtLeast(0)
+                                        stepped = true
+                                    }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    },
             ) {
                 items(state.photos, key = { it.mediaId }) { gridPhoto ->
                     val isSelected = gridPhoto.mediaId in selectedIds
@@ -187,9 +215,13 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                                         showGrid = false
                                     }
                                 },
+                                // Long-press starts multi-select (and picks this photo).
                                 onLongClick = {
-                                    viewModel.toggleFavoriteFor(gridPhoto.mediaId) {
-                                        confirmationLauncher.launch(IntentSenderRequest.Builder(it).build())
+                                    selectionMode = true
+                                    selectedIds = if (isSelected) {
+                                        selectedIds - gridPhoto.mediaId
+                                    } else {
+                                        selectedIds + gridPhoto.mediaId
                                     }
                                 },
                             ),
