@@ -3,9 +3,12 @@ package com.imagemanager.app.data
 import android.net.Uri
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import java.time.LocalDate
 import java.time.ZoneId
 
+@RunWith(RobolectricTestRunner::class)
 class PhotoMonthKeyTest {
     private fun millisOf(year: Int, month: Int, day: Int) =
         LocalDate.of(year, month, day).atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
