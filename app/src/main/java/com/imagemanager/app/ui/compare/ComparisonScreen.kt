@@ -5,6 +5,7 @@ import android.content.IntentSender
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -19,8 +20,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
@@ -41,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,8 +57,9 @@ import coil.compose.AsyncImage
 import com.imagemanager.app.data.Photo
 
 private val DELETE_COLOR = Color(0xFFD64545)
-private val HOLD_COLOR = Color(0xFF6B6B6B)
-private val PROMOTE_COLOR = Color(0xFF2E9E5B)
+private val DELETE_BUTTON_COLOR = Color.White
+private val HOLD_BUTTON_COLOR = Color(0xFF8A8A8A)
+private val PROMOTE_BUTTON_COLOR = Color.Black
 private const val MAX_ZOOM = 6f
 
 /** Zoom/pan shared by both panes so the same spot of both photos is always on screen. */
@@ -191,23 +201,37 @@ private fun ChallengerButtons(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxWidth().padding(8.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.fillMaxWidth().padding(10.dp),
     ) {
-        ActionButton("삭제", DELETE_COLOR, onDelete, Modifier.weight(1f))
-        ActionButton("보류", HOLD_COLOR, onHold, Modifier.weight(1f))
-        ActionButton("우선", PROMOTE_COLOR, onPromote, Modifier.weight(1f))
+        CircleActionButton(Icons.Filled.Delete, "삭제", DELETE_BUTTON_COLOR, Color(0xFF222222), onDelete)
+        CircleActionButton(Icons.Filled.Pause, "보류", HOLD_BUTTON_COLOR, Color.White, onHold)
+        CircleActionButton(Icons.Filled.EmojiEvents, "우선", PROMOTE_BUTTON_COLOR, Color.White, onPromote)
     }
 }
 
+/** Round icon button; the thin light ring keeps the black one visible on dark photos. */
 @Composable
-private fun ActionButton(text: String, color: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Button(
+private fun CircleActionButton(
+    icon: ImageVector,
+    description: String,
+    background: Color,
+    iconTint: Color,
+    onClick: () -> Unit,
+) {
+    Surface(
         onClick = onClick,
-        colors = ButtonDefaults.buttonColors(containerColor = color.copy(alpha = 0.9f)),
-        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-        modifier = modifier,
-    ) { Text(text, fontSize = 14.sp) }
+        shape = CircleShape,
+        color = background,
+        border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.7f)),
+        shadowElevation = 4.dp,
+        modifier = Modifier.size(52.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Icon(icon, contentDescription = description, tint = iconTint)
+        }
+    }
 }
 
 @Composable

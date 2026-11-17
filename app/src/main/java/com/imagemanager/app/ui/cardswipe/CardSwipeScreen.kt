@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,14 +32,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -93,6 +99,7 @@ private const val MAX_PHOTO_SCALE = 4f
 private val SWIPE_THRESHOLD_DP = 96.dp
 private val GRID_COLUMN_LEVELS = listOf(3, 5, 7)
 private const val GRID_PINCH_STEP_THRESHOLD = 0.75f
+private val SELECTION_COLOR = Color(0xFF2F80ED)
 private const val FLY_AWAY_MS = 320
 private const val TRASH_TOAST_MS = 2000L
 
@@ -197,8 +204,12 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                             .aspectRatio(1f)
                             .padding(1.dp)
                             .then(
+                                // Blue outer ring + white inner ring: visible on dark and bright photos alike.
                                 if (isSelected) {
-                                    Modifier.border(3.dp, MaterialTheme.colorScheme.primary)
+                                    Modifier
+                                        .border(4.dp, SELECTION_COLOR)
+                                        .padding(4.dp)
+                                        .border(2.dp, Color.White)
                                 } else {
                                     Modifier
                                 },
@@ -231,6 +242,22 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
                         )
+                        if (isSelected) {
+                            Box(modifier = Modifier.fillMaxSize().background(SELECTION_COLOR.copy(alpha = 0.25f)))
+                            Surface(
+                                modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp),
+                                shape = CircleShape,
+                                color = SELECTION_COLOR,
+                                border = BorderStroke(2.dp, Color.White),
+                            ) {
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = "선택됨",
+                                    tint = Color.White,
+                                    modifier = Modifier.padding(3.dp),
+                                )
+                            }
+                        }
                         if (gridPhoto.isFavorite) {
                             FavoriteBadge(modifier = Modifier.align(Alignment.TopStart))
                         }
