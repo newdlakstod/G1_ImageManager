@@ -73,3 +73,7 @@
 ## Update (2026-11-17, v0.3.0)
 - **Done:** Tap left/right half of the photo = previous/next. Snackbar made smaller (12sp, tighter
   padding) and 60% opaque, no shadow.
+
+## Update (2026-11-17, v0.4.0)
+- **Done:** New "월별" tab: months with photo counts (newest first) -> tap to swipe-sort that month.
+  `Photo.dateTaken` (MediaColumns.DATE_TAKEN) with fallback to DATE_MODIFIED; `Photo.monthKey`.

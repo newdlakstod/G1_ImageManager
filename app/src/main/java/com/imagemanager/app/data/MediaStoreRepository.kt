@@ -33,6 +33,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         MediaStore.Files.FileColumns.IS_FAVORITE,
         MediaStore.Files.FileColumns.MEDIA_TYPE,
         MediaStore.Files.FileColumns.RELATIVE_PATH,
+        MediaStore.MediaColumns.DATE_TAKEN,
     )
 
     fun listPhotos(offset: Int, limit: Int): List<Photo> =
@@ -52,6 +53,14 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
         offset = 0,
         limit = Int.MAX_VALUE,
     )
+
+    /** Photo counts per "yyyy-MM" month, newest month first. */
+    fun monthCounts(): List<Pair<String, Int>> =
+        listAllPhotos().groupingBy { it.monthKey }.eachCount().toList().sortedByDescending { it.first }
+
+    /** Photos taken in the given "yyyy-MM" month, newest first. */
+    fun listByMonth(monthKey: String): List<Photo> =
+        listAllPhotos().filter { it.monthKey == monthKey }.sortedByDescending { it.takenAtMillis }
 
     fun uriFor(mediaId: Long): Uri = typeSpecificUri(mediaId)
 
@@ -96,6 +105,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
             val favCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.IS_FAVORITE)
             val typeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
             val pathCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.RELATIVE_PATH)
+            val takenCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_TAKEN)
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
                 val isVideo = cursor.getInt(typeCol) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
@@ -107,6 +117,7 @@ class MediaStoreRepository(private val context: Context) : PhotoActions {
                     isFavorite = cursor.getInt(favCol) != 0,
                     isVideo = isVideo,
                     relativePath = cursor.getString(pathCol),
+                    dateTaken = cursor.getLong(takenCol),
                 )
             }
         }

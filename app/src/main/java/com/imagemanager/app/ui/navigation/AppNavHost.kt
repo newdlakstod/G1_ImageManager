@@ -3,6 +3,7 @@ package com.imagemanager.app.ui.navigation
 import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
@@ -32,6 +33,7 @@ import com.imagemanager.app.ui.cardswipe.CardSwipeViewModel
 import com.imagemanager.app.ui.compare.ComparisonScreen
 import com.imagemanager.app.ui.favorites.FavoritesScreen
 import com.imagemanager.app.ui.favorites.FavoritesViewModel
+import com.imagemanager.app.ui.months.MonthListScreen
 import com.imagemanager.app.ui.permissions.PermissionGateScreen
 import com.imagemanager.app.ui.piles.PileListScreen
 import com.imagemanager.app.ui.piles.PileViewModel
@@ -40,12 +42,13 @@ import com.imagemanager.app.ui.similar.SimilarGroupsViewModel
 
 private sealed class Tab(val route: String, val label: String, val icon: ImageVector) {
     object Swipe : Tab("swipe", "정리", Icons.Filled.SwapVert)
+    object Months : Tab("months", "월별", Icons.Filled.CalendarMonth)
     object Favorites : Tab("favorites", "즐겨찾기", Icons.Filled.Favorite)
     object Similar : Tab("similar", "유사 사진", Icons.Filled.Compare)
     object Piles : Tab("piles", "폴더함", Icons.Filled.Folder)
 }
 
-private val tabs = listOf(Tab.Swipe, Tab.Favorites, Tab.Similar, Tab.Piles)
+private val tabs = listOf(Tab.Swipe, Tab.Months, Tab.Favorites, Tab.Similar, Tab.Piles)
 
 @Composable
 fun AppNavHost(app: ImageManagerApp) {
@@ -97,6 +100,31 @@ fun AppNavHost(app: ImageManagerApp) {
                     viewModel = viewModel,
                     onCompareRequested = { mediaIds ->
                         navController.navigate("compare/${mediaIds.joinToString(",")}")
+                    },
+                )
+            }
+            composable(Tab.Months.route) {
+                MonthListScreen(
+                    loadMonths = { app.mediaStoreRepository.monthCounts() },
+                    onMonthClick = { navController.navigate("swipe_month/$it") },
+                )
+            }
+            composable(
+                route = "swipe_month/{month}",
+                arguments = listOf(navArgument("month") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val month = backStackEntry.arguments?.getString("month").orEmpty()
+                val viewModel: CardSwipeViewModel = viewModel(
+                    factory = AppViewModelFactory(
+                        app,
+                        cardSwipePhotos = app.mediaStoreRepository.listByMonth(month),
+                        refreshCardSwipePhotos = { app.mediaStoreRepository.listByMonth(month) },
+                    ),
+                )
+                CardSwipeScreen(
+                    viewModel = viewModel,
+                    onCompareRequested = { compareIds ->
+                        navController.navigate("compare/${compareIds.joinToString(",")}")
                     },
                 )
             }
