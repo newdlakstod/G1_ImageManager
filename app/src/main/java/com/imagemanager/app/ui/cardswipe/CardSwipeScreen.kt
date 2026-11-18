@@ -161,7 +161,10 @@ fun CardSwipeScreen(viewModel: CardSwipeViewModel, onCompareRequested: (List<Lon
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (showGrid) {
-            val gridState = rememberLazyGridState()
+            // Open the grid at the photo that was on screen, not at the top.
+            val gridState = rememberLazyGridState(
+                initialFirstVisibleItemIndex = state.currentIndex.coerceIn(0, (state.photos.size - 1).coerceAtLeast(0)),
+            )
             val coroutineScope = rememberCoroutineScope()
             var selectedIds by remember { mutableStateOf(setOf<Long>()) }
             // Selecting starts with a long-press; once anything is selected, taps toggle photos.

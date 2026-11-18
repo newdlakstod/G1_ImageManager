@@ -114,3 +114,7 @@
 - **Done:** Compare screen is full screen: bottom tabs hidden on `compare/*` routes, system bars hidden
   (swipe from edge to peek, restored on leave), photos fill the screen; "n / total" and "이전으로" float
   over the photos as translucent pills.
+
+## Update (2026-11-18, v0.10.1)
+- **Done:** Pinching from the single-photo view into the grid now opens the grid at the photo that was
+  on screen (`rememberLazyGridState(initialFirstVisibleItemIndex = currentIndex)`).
